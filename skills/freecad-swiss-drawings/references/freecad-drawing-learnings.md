@@ -51,6 +51,10 @@ Representative outcomes:
 
 All broad-run drawings report missing material/tolerance input because the corpus deliberately supplies no manufacturing specification. These expected failures do not erase real geometry/layout failures. Report both categories explicitly.
 
+The final suite passed 134 tests (127 pure Python, 7 real FreeCAD). The five-case final stress rerun completed and retained the documented unresolved findings. Passing the regression suite establishes those tested behaviours, not release readiness for every shape.
+
+An additional source review found that `threads.callout` still supplies `6H` / `6g` for detected modelled threads. These are generator assumptions, not requirements recovered from the STEP file. Confirm or replace them from the designer's specification before release; removing automatic thread-class inference is remaining implementation work.
+
 ## Standards and source handling
 
 Use the Swiss SN EN ISO adoption and the contracted edition. Public catalogues verified ISO 128-3:2022, ISO 22081:2021, ISO 8015:2011 and ISO 21920-1:2021. Normen-Auszug 2026 is a teaching/practice compendium, not itself a complete machine-readable specification.

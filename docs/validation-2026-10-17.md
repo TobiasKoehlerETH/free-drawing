@@ -2,6 +2,10 @@
 
 Environment: Windows / FreeCAD 1.1. This is implementation evidence, not a standards certificate.
 
+## Final automated checks
+
+`uv run --group dev pytest -q` completed with **134 passed** in 471.40 seconds: 127 pure-Python tests and 7 real FreeCAD integration tests. Python compilation checks also passed. The installed `freecad-swiss-drawings` skill passed `quick_validate.py`; its local Markdown links resolve. PyYAML was provided in an isolated `uv run --with pyyaml` environment for the skill validator.
+
 ## Broad corpus
 
 The batch created and inspected **36 unique part drawings**: 28 existing samples and 8 new stress shapes. It produced 14 sections and 20 details. Inputs include plates, bolt circles, turned parts, threaded parts, pockets, counterbores, cross holes, slots, seven sheet-metal forms, assemblies, a large frame, a tiny pin, a blind manifold, rotated geometry, an inclined bore, a loft, a ribbed bracket and a stepped housing.
@@ -23,6 +27,8 @@ This batch spanned active development. Preserve it as diagnostic evidence; do no
 - Micro-groove rerun: an enlarged detail is generated with dimensions reassigned to its geometry.
 - Supplementary FreeCAD regression tests create drawings and reopen saved files in another process; check first/third-angle counterbores, tube half-section geometry, micro-groove details and flange dimensions.
 - Final targeted corpus checks cover oblique bore, lofted adapter, mixed assembly, stepped housing and rotated manifold with the final coverage-gap and assembly-section policy.
+
+The final targeted batch completed all five cases. The oblique bore has an explicit E.1 coverage-gap failure; the loft has a freeform gap plus unresolved overall positions; the mixed assembly has no automatically fused section; the stepped housing still has unplaced boss-centre requirements; and the rotated manifold produces two sections and one detail but retains a callout collision. Its artifact summary is `samples/final-check/summary.json`.
 
 These cases still need engineering specification: the test inputs deliberately do not supply material or tolerance values. Their F.1 and K.1 failures are expected and do not indicate a failed file export.
 

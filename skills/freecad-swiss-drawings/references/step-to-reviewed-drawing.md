@@ -31,6 +31,8 @@ Collect available information from the colleague, existing drawing or project sp
 
 Start the geometric draft with what is known. Keep missing requirements on an open-items list. Do not invent `ISO 2768-mK`, `Ra 3.2`, a material or an edge break merely to clear inspection findings. Modelled holes are not proof of a thread specification; imported PMI is not guaranteed to be extracted by this tool.
 
+The existing modelled-thread detector currently inserts `6H` or `6g`. Treat these generated classes as assumptions and confirm or correct them before release.
+
 ## 3. Check the backend and generate a draft
 
 The MCP route offers the most control. Call `drawing_status()` first. The local installation is `C:/Code/free-drawing`, with FreeCAD 1.1 detected in `C:/Program Files/FreeCAD 1.1/bin/`. Other computers must discover their own paths. Headless mode needs no running GUI; the RPC backend requires the addon server in FreeCAD.
