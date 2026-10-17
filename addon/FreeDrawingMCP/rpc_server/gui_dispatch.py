@@ -1,6 +1,6 @@
 """Run callables on FreeCAD's GUI thread from the XML-RPC thread.
 
-Adapted from neka-nat/freecad-mcp (MIT): per-call response queues, an
+Uses per-call response queues, an
 immediate Qt-signal wake-up with a 500 ms heartbeat fallback, a re-entrancy
 guard, deferral while the user drags in the 3D view or a modal dialog is
 open, and separate queue/run budgets.

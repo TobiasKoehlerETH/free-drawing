@@ -286,7 +286,7 @@ The rules engine has unit tests on saved snapshots in `tests/fixtures/`. Run the
 
 ## Security
 
-The XML-RPC server inside FreeCAD can run arbitrary Python (`execute_code`). It follows the same hardening as neka-nat/freecad-mcp:
+The XML-RPC server inside FreeCAD can run arbitrary Python (`execute_code`). It uses the following protections:
 
 - It **binds to `127.0.0.1`** by default. Binding to all interfaces requires `"remote_enabled": true` in the settings file; turn that on only on a trusted network, and set a token.
 - It **rejects browser requests**: any request with an `Origin` header gets 403, and any non-XML content type gets 415. This blocks CSRF and DNS-rebinding attacks from web pages.
@@ -305,10 +305,9 @@ The XML-RPC server inside FreeCAD can run arbitrary Python (`execute_code`). It 
 
 ## Credits
 
-- Architecture (an MCP server driving a FreeCAD addon over XML-RPC, with GUI-thread dispatch and localhost/Origin/token hardening) adapted from **[neka-nat/freecad-mcp](https://github.com/neka-nat/freecad-mcp)**, MIT License, Copyright (c) 2025 Shirokuma (k tanaka). Thank you!
 - Built on [FreeCAD](https://www.freecad.org) TechDraw and the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 - Drafting rules: see [`guidelines/`](guidelines/README.md) (ISO 128, 129, 1101, 2768, 5455, 5457, 8015 practice).
 
 ## License
 
-[MIT](LICENSE) © 2026 Tobias Koehler. Portions adapted from neka-nat/freecad-mcp (MIT). See [LICENSE](LICENSE) for the full notices.
+[MIT](LICENSE) © 2026 Tobias Koehler. See [LICENSE](LICENSE) for the full notices.

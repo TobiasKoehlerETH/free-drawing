@@ -7,7 +7,7 @@ Methods:
 ``drawing_ops(steps)``          -> {"results": [...]} | {"error", "traceback"}
 ``execute_code(code)``          -> {"success", "output"|"error"}
 
-Security (as in neka-nat/freecad-mcp): binds to 127.0.0.1 by default,
+Security: binds to 127.0.0.1 by default,
 refuses requests carrying a browser ``Origin`` header or a non-XML content
 type (CSRF / DNS rebinding), and optionally requires a bearer token.
 """

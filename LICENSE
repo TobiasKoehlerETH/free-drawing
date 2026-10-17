@@ -24,11 +24,8 @@ SOFTWARE.
 
 Third-party notice
 
-Portions of this software - the FreeCAD addon / MCP server architecture, the
-XML-RPC bridge and the GUI-thread dispatcher in
-addon/FreeDrawingMCP/rpc_server/ - are adapted from neka-nat/freecad-mcp
-(https://github.com/neka-nat/freecad-mcp), which is licensed under the MIT
-License:
+The following MIT notice applies to third-party code in
+addon/FreeDrawingMCP/rpc_server/:
 
     MIT License
 
