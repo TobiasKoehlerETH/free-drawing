@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "free-drawing": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/free-drawing",
+        "run",
+        "free-drawing-mcp",
+        "--backend",
+        "auto"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,28 @@
+[project]
+name = "free-drawing-mcp"
+version = "0.1.0"
+description = "MCP server that creates ISO technical drawings in FreeCAD TechDraw and inspects them against drafting guidelines"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Tobias Koehler", email = "tobiassskoehler@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = ["mcp[cli]>=1.2"]
+
+[project.scripts]
+free-drawing-mcp = "free_drawing_mcp.server:main"
+free-drawing-check = "free_drawing_mcp.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/free_drawing_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["freecad: needs a local FreeCAD (freecadcmd)"]

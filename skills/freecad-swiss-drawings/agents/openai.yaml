@@ -1,0 +1,4 @@
+interface:
+  display_name: "FreeCAD Swiss Drawings"
+  short_description: "Create and review Swiss SN EN ISO CAD drawings"
+  default_prompt: "Use $freecad-swiss-drawings to create and inspect a drawing from my STEP file, with sections and details where needed."

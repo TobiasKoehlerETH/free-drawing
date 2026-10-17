@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "free-drawing": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:/path/to/free-drawing",
+        "run",
+        "free-drawing-mcp",
+        "--backend",
+        "auto"
+      ],
+      "env": {
+        "FREE_DRAWING_TOKEN": "",
+        "FREECADCMD": ""
+      }
+    }
+  }
+}

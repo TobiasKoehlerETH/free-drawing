@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# FreeCAD backups / autosave
+*.FCBak
+*.FCStd1
+
+# Local scratch and indexes
+.scratch/
+.firecrawl/
+# Downloaded publisher previews are local references, not MIT-licensed assets.
+guidelines/sources/*.pdf
+samples/validation/
+samples/recheck/
+samples/final-check/
+.codegraph/
+
+# Sample batch output: only the summary table is tracked
+samples/out/*
+!samples/out/summary.md
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

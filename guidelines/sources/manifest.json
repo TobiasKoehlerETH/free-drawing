@@ -1,0 +1,56 @@
+[
+  {
+    "file": "normen-auszug-2026-leseprobe.pdf",
+    "url": "https://www.nextecmedia.ch/resources/601ee8d22c1050edc6bda9165231623d.pdf",
+    "bytes": 1275774,
+    "pages": 19,
+    "sha256": "24ecedbf31c470c8c9bf7fe0c6dff9fbe3fd0ccdd8da7496024599012f01e04d",
+    "retrieved": "2026-10-17",
+    "scope": "public preview or teaching reference, not full normative coverage"
+  },
+  {
+    "file": "snv-gps-normen-auszug-cross-reference.pdf",
+    "url": "https://www.snv.ch/de/verweis-auf-normen-auszug.html?file=files/content/Dokumente/Academy/Verweis%20auf%20Normen-Auszug.pdf&cid=15366",
+    "bytes": 91880,
+    "pages": 1,
+    "sha256": "b2e313dbcca94859da2ffe3094089bd024a3b75e104d187749d979565ab6bccd",
+    "retrieved": "2026-10-17",
+    "scope": "public preview or teaching reference, not full normative coverage"
+  },
+  {
+    "file": "iso-8015-2011-preview.pdf",
+    "url": "https://cdn.standards.iteh.ai/samples/55979/fbc0c15d54514a4f815a1aaa6844b520/ISO-8015-2011.pdf",
+    "bytes": 297290,
+    "pages": 9,
+    "sha256": "945255ce006ffaeb264dc0f7c7f85c23ac5a6664f85f3e2cf0e355d54ccc35fa",
+    "retrieved": "2026-10-17",
+    "scope": "public preview or teaching reference, not full normative coverage"
+  },
+  {
+    "file": "iso-128-3-2022-preview.pdf",
+    "url": "https://cdn.standards.iteh.ai/samples/83356/d1819f3aabb74441890b2302a24a4cb6/ISO-128-3-2022.pdf",
+    "bytes": 1881455,
+    "pages": 15,
+    "sha256": "c296181c78894452a3af1fe97e50cd8afed35ae7420101098cf8c3c24e552dd7",
+    "retrieved": "2026-10-17",
+    "scope": "public preview or teaching reference, not full normative coverage"
+  },
+  {
+    "file": "iso-22081-2021-preview.pdf",
+    "url": "https://cdn.standards.iteh.ai/samples/iso/iso-22081-2021/cfd493708cd342729c2888275212365f/iso-22081-2021.pdf",
+    "bytes": 384061,
+    "pages": 4,
+    "sha256": "23c08d8244ba74d58a74e1c37e1b7b0a821f8713c71ff499255aacb6569d446e",
+    "retrieved": "2026-10-17",
+    "scope": "public preview or teaching reference, not full normative coverage"
+  },
+  {
+    "file": "iso-21920-1-2021-preview.pdf",
+    "url": "https://cdn.standards.iteh.ai/samples/72196/5012ce84af1a4629a79764a48401a1db/ISO-21920-1-2021.pdf",
+    "bytes": 1477870,
+    "pages": 15,
+    "sha256": "e4d26788574b27e9a302289d266aa1a0bccad38a89a6faf5f6e7c5fd54b59310",
+    "retrieved": "2026-10-17",
+    "scope": "public preview or teaching reference, not full normative coverage"
+  }
+]
