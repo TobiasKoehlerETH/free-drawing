@@ -147,7 +147,7 @@ def test_report_metadata(snap):
     snap["meta"]["unplaced"] = ["slot"]
     rep = inspect(snap)
     assert rep.page == "Page" and rep.document == "synthetic.FCStd"
-    assert rep.sheet == "A3 landscape · first-angle · 1 : 1"
+    assert rep.sheet == "A3 landscape · first-angle · 1 : 1 · manufacturing"
     assert rep.unplaced == ["slot"]
 
 
@@ -200,7 +200,7 @@ def test_real_fixture_expected_findings(name):
     assert [f.status for f in k1] == ["fail"]  # generated drawings leave the material to the user
     assert not [f for f in rep.findings if f.rule in ("E.1", "E.11", "A.8", "C.2", "C.6", "C.7", "P.5")
                 and f.status == "fail"]
-    assert rep.sheet == "A3 landscape · first-angle · 1 : 1"
+    assert rep.sheet == "A3 landscape · first-angle · 1 : 1 · manufacturing"
 
 
 def test_real_fixture_material_set_passes_k1():

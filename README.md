@@ -32,9 +32,9 @@ All images come from `samples/run_samples.py` on the bundled sample parts. Nothi
 - **Surface-only models**: closed shells are sewn into solids. Invalid B-reps are repaired with a warning. Inch files are converted to mm on import.
 
 **Automatic view selection**
-- The tool tries 6 front directions with 4 view sets (`Front`, `Front+Top`, `Front+Right`, `Front+Top+Right`). It keeps the **smallest view set that shows every feature characteristically**: holes where they appear as circles, faces where they are seen edge-on.
-- Plates get **one view plus a `t` note**. Turned parts are drawn with the axis horizontal and diameters on the profile.
-- If a feature still can't be dimensioned, or would be dimensioned on a hidden line, the tool adds a view. Views that carry no unique dimension are removed.
+- The tool tries 6 front directions and keeps **at least Front, Top and Right** for automatic drawings. It selects the orientation that best exposes features: holes where they appear as circles, faces where they are seen edge-on.
+- Plates retain the three principal views. Turned parts are drawn with the axis horizontal and diameters on the profile. Explicit `views` requests can override automatic selection.
+- If a feature still can't be dimensioned, or would be dimensioned on a hidden line, the tool adds a view. It can remove redundant extra views while retaining Front, Top and Right.
 - **First-angle** (ISO default) or **third-angle** projection. The scale is the largest ISO 5455 scale that fits the sheet, with 1 : 1 preferred.
 
 **Feature-based dimensioning (ISO 129-1, [guideline 04](guidelines/04-dimensioning.md))**

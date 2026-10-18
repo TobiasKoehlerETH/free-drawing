@@ -65,7 +65,7 @@ def test_create_and_inspect(drawing):
     assert not bad, rep.text()
     ortho = [v for v in snap["views"] if v["kind"] == "ortho"]
     pictorial = [v for v in snap["views"] if v["kind"] == "pictorial"]
-    assert len(ortho) == 2, [v["projection_type"] for v in ortho]
+    assert {"Front", "Top", "Right"} <= {v["projection_type"] for v in ortho}
     assert pictorial and pictorial[0]["shaded"]
     assert snap["title_block"]["scale"] == "1 : 1"
     assert [f.status for f in rep.findings if f.rule == "K.1"] == ["fail"]

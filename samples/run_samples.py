@@ -28,6 +28,7 @@ from free_drawing_mcp.backends import HeadlessBackend, detect_freecadcmd  # noqa
 
 PARTS = ROOT / "samples" / "parts"
 OUT = ROOT / "samples" / "out"
+VIEWS = "auto"
 
 
 def generate():
@@ -49,10 +50,15 @@ def run_one(step: Path) -> dict:
     backend = HeadlessBackend(timeout=900)
     res = {"part": step.stem}
     try:
-        created, snap = backend.run([
-            {"op": "create_drawing", "args": {"source": str(step), "output": str(fcstd)}},
-            {"op": "snapshot", "args": {"doc": str(fcstd)}},
-        ])
+        created = backend.run([
+            {"op": "create_drawing", "args": {"source": str(step), "output": str(fcstd), "views": VIEWS}},
+        ])[0]
+        if AUTOFIX:  # same safe layout pass create_drawing applies through MCP
+            from free_drawing_mcp import workflow
+
+            _, log, _ = workflow.autofix(backend, str(fcstd), rules=workflow.LAYOUT_RULES)
+            res["autofix"] = log
+        snap = backend.run([{"op": "snapshot", "args": {"doc": str(fcstd)}}])[0]
         report = inspect(snap)
         (OUT / f"{step.stem}.snapshot.json").write_text(json.dumps(snap, ensure_ascii=False, indent=1), encoding="utf-8")
         backend.run([{"op": "render", "args": {"doc": str(fcstd), "out_path": str(png), "width": 2400,
@@ -64,16 +70,26 @@ def run_one(step: Path) -> dict:
     return res
 
 
+AUTOFIX = True
+
+
 def main():
-    global OUT
+    global OUT, VIEWS, AUTOFIX
     ap = argparse.ArgumentParser()
     ap.add_argument("names", nargs="*")
     ap.add_argument("--generate", action="store_true")
     ap.add_argument("--extra", action="append", default=[], help="extra folder or STEP file")
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--out", type=Path, default=OUT, help="artifact directory")
+    ap.add_argument("--views", nargs="+", choices=["Front", "Top", "Right", "Left", "Bottom"],
+                    help="fixed principal views for every input (default: automatic selection)")
+    ap.add_argument("--no-autofix", action="store_true", help="skip the safe layout autofix pass")
     args = ap.parse_args()
     OUT = args.out.resolve()
+    AUTOFIX = not args.no_autofix
+    if args.views and "Front" not in args.views:
+        ap.error("--views must include Front")
+    VIEWS = list(dict.fromkeys(args.views)) if args.views else "auto"
     if args.generate or not any(PARTS.glob("*.step")):
         generate()
     OUT.mkdir(parents=True, exist_ok=True)

@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 import xmlrpc.client
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,18 @@ class RpcBackend:
             return p.execute_code(code)
 
 
+def _read_progress(path: Path) -> list[dict[str, Any]]:
+    try:
+        return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    except (OSError, ValueError):
+        return []
+
+
+def _last_stage(path: Path) -> str:
+    stages = _read_progress(path)
+    return stages[-1]["stage"] if stages else "startup"
+
+
 def detect_freecadcmd() -> list[str] | None:
     env = os.environ.get("FREECADCMD")
     if env:
@@ -105,9 +118,10 @@ def detect_freecadcmd() -> list[str] | None:
 class HeadlessBackend:
     kind = "headless"
 
-    def __init__(self, command: list[str] | None = None, timeout: float = 600):
+    def __init__(self, command: list[str] | None = None, timeout: float = 600, job_root: str | None = None):
         self.command = command or detect_freecadcmd()
         self.timeout = timeout
+        self.job_root = job_root  # where fd_job_* work folders go (default: system temp)
 
     def available(self) -> bool:
         return bool(self.command)
@@ -117,28 +131,53 @@ class HeadlessBackend:
             raise BackendError("freecadcmd not found: install FreeCAD or pass --freecadcmd / set FREECADCMD")
         if not math.isfinite(self.timeout) or self.timeout <= 0:
             raise BackendError("timeout must be positive")
-        work = Path(tempfile.mkdtemp(prefix="fd_job_"))
-        job = work / "job.json"
-        result = work / "result.json"
-        job.write_text(json.dumps({"steps": steps, "result": str(result)}, ensure_ascii=False), encoding="utf-8")
-        runner = ADDON_DIR / "fd_drawing" / "runner.py"
-        env = dict(os.environ, FD_JOB=str(job), FD_ADDON_DIR=str(ADDON_DIR), QT_QPA_PLATFORM="offscreen")
-        argv = self.command + ["-c", f"exec(open({str(runner)!r}, encoding='utf-8').read())"]
+        work = Path(tempfile.mkdtemp(prefix="fd_job_", dir=self.job_root))
+        keep = False
+        started = time.monotonic()
+        progress = work / "progress.jsonl"
         try:
-            proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                  timeout=self.timeout, env=env, cwd=os.getcwd())
-        except subprocess.TimeoutExpired as e:
-            raise BackendError(f"headless FreeCAD did not finish within {self.timeout:g}s") from e
-        try:
+            job = work / "job.json"
+            result = work / "result.json"
+            job.write_text(json.dumps({"steps": steps, "result": str(result), "progress": str(progress)},
+                                      ensure_ascii=False), encoding="utf-8")
+            runner = ADDON_DIR / "fd_drawing" / "runner.py"
+            env = dict(os.environ, FD_JOB=str(job), FD_ADDON_DIR=str(ADDON_DIR), QT_QPA_PLATFORM="offscreen")
+            argv = self.command + ["-c", f"exec(open({str(runner)!r}, encoding='utf-8').read())"]
+            try:
+                proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                      timeout=self.timeout, env=env, cwd=os.getcwd())
+            except subprocess.TimeoutExpired as e:
+                # subprocess.run already killed and reaped the freecadcmd it started
+                keep = bool(os.environ.get("FD_KEEP_FAILED_JOBS"))
+                raise BackendError(self._timeout_message(steps, progress, time.monotonic() - started,
+                                                         work if keep else None)) from e
             if not result.exists():
+                keep = bool(os.environ.get("FD_KEEP_FAILED_JOBS"))
                 tail = "\n".join((proc.stderr or proc.stdout or "").splitlines()[-15:])
-                raise BackendError(f"headless FreeCAD exited with {proc.returncode} without a result:\n{tail}")
+                raise BackendError(f"headless FreeCAD exited with {proc.returncode} without a result "
+                                   f"(last stage: {_last_stage(progress)}):\n{tail}")
             out = json.loads(result.read_text(encoding="utf-8"))
         finally:
-            shutil.rmtree(work, ignore_errors=True)
+            if not keep:
+                shutil.rmtree(work, ignore_errors=True)
         if out.get("error"):
             raise BackendError(out["error"] + "\n" + out.get("traceback", ""))
         return out["results"]
+
+    def _timeout_message(self, steps, progress: Path, elapsed: float, kept: Path | None) -> str:
+        ops = ", ".join(s.get("op", "?") for s in steps)
+        src = next((s.get("args", {}).get("source") or s.get("args", {}).get("doc") for s in steps
+                    if s.get("args", {}).get("source") or s.get("args", {}).get("doc")), None)
+        stages = _read_progress(progress)
+        last = stages[-1] if stages else {}
+        detail = ", ".join(f"{k}={v}" for k, v in last.items() if k not in ("stage", "t"))
+        trail = " -> ".join(f"{s['stage']}@{s.get('t', 0):g}s" for s in stages[-8:])
+        msg = (f"headless FreeCAD did not finish within {self.timeout:g}s (ran {elapsed:.1f}s) "
+               f"in '{ops}' for {src}: stuck in stage '{last.get('stage', 'startup')}'"
+               + (f" ({detail})" if detail else "") + (f"; stages: {trail}" if trail else ""))
+        if kept:
+            msg += f"; job kept for diagnosis in {kept}"
+        return msg
 
     def execute_code(self, code: str) -> dict[str, Any]:
         raise BackendError("execute_code needs the GUI addon (rpc backend)")

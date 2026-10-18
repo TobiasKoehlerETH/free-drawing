@@ -31,6 +31,7 @@ guidelines/sources/*.pdf
 samples/validation/
 samples/recheck/
 samples/final-check/
+samples/validation-2026-10-18/
 .codegraph/
 
 # Sample batch output: only the summary table is tracked

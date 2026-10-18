@@ -288,6 +288,11 @@ _FIRST = {"Top": (0, -1), "Bottom": (0, 1), "Right": (-1, 0), "Left": (1, 0), "R
 
 
 def rules_C(c: Ctx):
+    if not c.ortho and not c.pictorial and not c.sections and not c.details:
+        yield F("C.1", "fail", "no inspectable TechDraw views on the page - geometry embedded in the template or an "
+                "SVG cannot be checked, so completeness is not assessed",
+                hint="create the views with create_drawing / TechDraw view objects")
+        return
     front = next((v for v in c.ortho if v.get("projection_type") == "Front"), c.ortho[0] if c.ortho else None)
     if front is None:
         yield F("C.1", "fail", "no orthographic views on the sheet")
@@ -838,11 +843,25 @@ def rules_O(c: Ctx):
         for rid in ("O.1", "O.2", "O.3", "O.4"):
             yield F(rid, "na", "not a sheet-metal part")
         return
-    ok = re.search(r"\b(UP|DN)\b\s*\d+\s*°\s*R", c.all_text)
-    yield F("O.1", "pass" if ok else "warn", "bend direction, angle and inside radius stated")
+    sheet = c.meta.get("sheet") or {}
+    callout = re.search(r"\b(UP|DN)\b\s*\d+\s*°\s*R", c.all_text)
+    inside = sheet.get("inside_radii") or []
+    radius_dims = {round(d["value"], 2) for d in c.dims if d["type"] == "Radius" and d.get("value") is not None}
+    radius_ok = bool(inside) and all(round(r, 2) in radius_dims for r in inside)
+    t_ok = bool(sheet.get("t")) and re.search(rf"\bt\s*=?\s*{_num_re(sheet['t'])}\b", c.all_text)
+    if callout or (radius_ok and t_ok):
+        yield F("O.1", "pass", "thickness and inside bend radius stated" + ("" if callout else "; 90° bends shown in the views"))
+    else:
+        missing = ([] if radius_ok else ["inside bend radius"]) + ([] if t_ok else ["sheet thickness t"])
+        yield F("O.1", "fail" if sheet else "warn", "bend callout incomplete: missing " + ", ".join(missing or ["direction/angle"]),
+                fix=_note_append(c, f"t{sheet['t']:g}") if sheet and not t_ok else None, auto=bool(sheet and not t_ok))
     yield F("O.2", "review", "bend order shown where sequence matters")
     yield F("O.3", "review", "bend relief where material would tear")
-    yield F("O.4", "pass" if re.search(r"K\s*=|BEND (TABLE|ALLOWANCE)", c.all_text) else "warn", "flat-pattern basis stated")
+    if re.search(r"K\s*=|BEND (TABLE|ALLOWANCE)|DEDUCTION", c.all_text, re.I):
+        yield F("O.4", "pass", "flat-pattern basis stated")
+    else:
+        yield F("O.4", "warn", "flat-pattern basis (K-factor or bend table) not stated",
+                fix=_note_append(c, "UNFOLD PER K=<k-factor>"), hint="state the K-factor or bend table used by the shop")
 
 
 # ================================================================= P. project

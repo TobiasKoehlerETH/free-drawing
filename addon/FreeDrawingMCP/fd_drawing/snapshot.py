@@ -136,24 +136,21 @@ def _segments(view, edges, vis, origin, scale, max_seg=1.5):
 
 def _cosmetic(view, origin, scale):
     out = []
-    for tag_obj in _cosmetic_tags(view):
-        try:
-            ce = view.getCosmeticEdge(tag_obj)
-            a = G.local_to_page(view, (ce.Start.x, ce.Start.y), origin, scale)
-            b = G.local_to_page(view, (ce.End.x, ce.End.y), origin, scale)
-            out.append({"tag": tag_obj, "kind": "cosmetic", "points": [r2(a[0]), r2(a[1]), r2(b[0]), r2(b[1])]})
-        except Exception:
+    for index, edge in G.iter_edges(view, geom_only=False):
+        auxiliary = G.auxiliary_edge(view, index)
+        if auxiliary is None:
             continue
-    try:
-        for tag in _center_line_tags(view):
-            cl = view.getCenterLine(tag)
-            pts = [getattr(cl, "Start", None), getattr(cl, "End", None)]
-            if pts[0] is not None and pts[1] is not None:
-                a = G.local_to_page(view, (pts[0].x, pts[0].y), origin, scale)
-                b = G.local_to_page(view, (pts[1].x, pts[1].y), origin, scale)
-                out.append({"tag": tag, "kind": "centerline", "points": [r2(a[0]), r2(a[1]), r2(b[0]), r2(b[1])]})
-    except Exception:
-        pass
+        obj, kind = auxiliary
+        fmt = dict(getattr(obj, "Format", {}) or {})
+        pts = [G.local_to_page(view, p, origin, scale) for p in G.discretize(edge)]
+        rec = {"tag": str(obj.Tag), "kind": kind, "edge": f"Edge{index}",
+               "geometry": "line" if type(edge.Curve).__name__ == "Line" else "polyline",
+               "points": [r2(c) for p in pts for c in p], "format": fmt}
+        if type(edge.Curve).__name__ == "Circle" and edge.isClosed():
+            center = edge.Curve.Center
+            rec.update(geometry="circle", center=[r2(c) for c in G.local_to_page(
+                view, (center.x, center.y), origin, scale)], radius=r2(edge.Curve.Radius * scale))
+        out.append(rec)
     return out
 
 
@@ -281,7 +278,11 @@ def _view_record(view, include_geometry):
         r = float(e.Curve.Radius) * scale
         marked = False
         for cm in cosmetic:
+            if cm.get("geometry", "line") != "line" or not cm.get("format", {}).get("visible", True):
+                continue
             p = cm["points"]
+            if len(p) < 4:
+                continue
             if _seg_point_dist(cp, (p[0], p[1]), (p[2], p[3])) < 0.3 and math.hypot(p[2] - p[0], p[3] - p[1]) > r:
                 marked = True
                 break

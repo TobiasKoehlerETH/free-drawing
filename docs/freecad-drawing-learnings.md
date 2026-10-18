@@ -73,6 +73,10 @@ Preserve input and output files separately. `.FCStd` source handling can load an
 
 The CLI has fewer options than the MCP API. A CLI exit code of 1 is also used for inspection FAIL after successful generation. `samples/run_samples.py` catches errors per part and its process exit alone is not a qualification result: read `ok`, findings and artifacts. Avoid simultaneous jobs writing the same output stem; use distinct output directories, and rename colliding input stems before batch processing.
 
+## Brevana customer-case follow-up
+
+The [Brevana redraw evaluation](brevana-redraw-learnings-2026-10-17.md) records a 47-sheet case with a 48-component machine, preserved Rev B/C sealing requirements, an automatic group-head timeout, projection-stage traces, temporary-job cleanup gaps, template label loss, export/font issues and reference-scope inspection limitations. It includes concrete workarounds, evidence paths and acceptance criteria. Its SVG-based deliverables are explicitly non-associative; they are not an additional successful qualification of the automatic dimensioning pipeline.
+
 ## Remaining work
 
 1. Layout convergence after dimension relocation: annotation/view envelopes must be reassessed together, including detail boundaries and captions.

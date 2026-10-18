@@ -65,6 +65,25 @@ def _poly(points_flat, H):
     return " ".join(pts)
 
 
+def _cosmetic_svg(c, H):
+    """Preserve the stored TechDraw line style for straight and curved guides."""
+    fmt = c.get("format") or {}
+    if not fmt.get("visible", True):
+        return ""
+    style = int(fmt.get("style", 4))
+    dash = {2: "3,1.5", 3: "0.5,1.5", 4: "6,1,0.5,1", 5: "6,1,0.5,1,0.5,1"}.get(style)
+    attrs = f'stroke-width="{float(fmt.get("weight", 0.25))}"'
+    if dash:
+        attrs += f' stroke-dasharray="{dash}"'
+    color = fmt.get("color")
+    if color and len(color) >= 3:
+        attrs += ' stroke="#{:02x}{:02x}{:02x}"'.format(*(max(0, min(255, round(float(x) * 255))) for x in color[:3]))
+    if c.get("geometry") == "circle":
+        center = c["center"]
+        return f'<circle cx="{center[0]}" cy="{H - center[1]}" r="{c["radius"]}" {attrs}/>'
+    return f'<polyline points="{_poly(c.get("points", []), H)}" {attrs}/>'
+
+
 def schematic_svg(snap, highlights=None, template_path=None):
     W = snap["sheet"]["width"]
     H = snap["sheet"]["height"]
@@ -87,8 +106,7 @@ def schematic_svg(snap, highlights=None, template_path=None):
         for pl in v.get("polylines_visible", []):
             out.append(f'<polyline points="{_poly(pl, H)}" stroke-width="{lw.get("visible", 0.7)}"/>')
         for c in v.get("cosmetic", []):
-            p = c["points"]
-            out.append(f'<line x1="{p[0]}" y1="{H - p[1]}" x2="{p[2]}" y2="{H - p[3]}" stroke-width="0.25" stroke-dasharray="6,1,0.5,1"/>')
+            out.append(_cosmetic_svg(c, H))
         if v.get("kind") == "section" and v.get("hatch"):
             out.append(_hatch_svg(v["hatch"], H, f"hatch{len(out)}"))
         if v.get("kind") == "section" and v.get("cutting_line"):

@@ -19,8 +19,16 @@ from .model import Finding, Report, highlights
 __all__ = ["inspect", "highlights", "Report", "Finding", "catalog"]
 
 
-def inspect(snapshot: dict[str, Any], sections: Iterable[str] | None = None, rules: Iterable[str] | None = None) -> Report:
-    """Run the rules. ``sections`` like ``["A", "E"]``; ``rules`` like ``["E.10"]``."""
+def inspect(snapshot: dict[str, Any], sections: Iterable[str] | None = None, rules: Iterable[str] | None = None,
+            purpose: str | None = None) -> Report:
+    """Run the rules. ``sections`` like ``["A", "E"]``; ``rules`` like ``["E.10"]``.
+
+    ``purpose`` (manufacturing | assembly | reference | change_notice) defaults
+    to the purpose recorded on the page, else manufacturing; see ``purpose.py``.
+    """
+    from . import purpose as purpose_mod
+
+    use = purpose_mod.normalize(purpose or (snapshot.get("meta") or {}).get("purpose"))
     ctx = Ctx(snapshot)
     want_sections = {s.upper() for s in sections} if sections else None
     want_rules = {r.upper() for r in rules} if rules else None
@@ -37,12 +45,16 @@ def inspect(snapshot: dict[str, Any], sections: Iterable[str] | None = None, rul
                 findings.append(f)
         except Exception as e:  # a broken rule must not hide the others
             findings.append(Finding(rule=f"{sid}.*", status="warn", message=f"rule section {sid} crashed: {type(e).__name__}: {e}"))
+    findings = purpose_mod.apply(findings, use, snapshot)
+    if want_rules:
+        findings = [f for f in findings if f.rule in want_rules]
     sheet = snapshot.get("sheet", {})
     proj = snapshot.get("projection") or "?"
     scales = [v.get("scale") for v in snapshot.get("views", []) if v.get("kind") == "ortho" and v.get("scale")]
     from .checks import scale_text
 
-    desc = f"{sheet.get('size_name') or '?'} {sheet.get('orientation', '')} · {proj}-angle · {scale_text(scales[0]) if scales else '-'}"
+    desc = (f"{sheet.get('size_name') or '?'} {sheet.get('orientation', '')} · {proj}-angle · "
+            f"{scale_text(scales[0]) if scales else '-'} · {use.replace('_', ' ')}")
     name = snapshot.get("file") or snapshot.get("document")
     return Report(page=snapshot.get("page", "?"), document=name, sheet=desc, findings=findings,
                   unplaced=list((snapshot.get("meta") or {}).get("unplaced") or []))

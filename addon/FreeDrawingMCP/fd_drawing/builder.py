@@ -4,8 +4,8 @@ Pipeline (each step cites the guideline it implements):
 
 1. classify the part (plate / turned / prismatic) and pick the front view that
    shows the most visible and fewest hidden edges [02 C.1]
-2. pick the minimum view set: plate -> 1 view + thickness, turned -> 2 views,
-   otherwise front/top/right in first-angle arrangement [02 C.2 C.3]
+2. retain front/top/right as the minimum automatic view set, with additional
+   views where needed for feature coverage [02 C.2 C.3]
 3. plan dimensions (holes, diameters, baseline coordinates) [04]
 4. choose the largest ISO 5455 scale (1:1 preferred) whose layout - views plus
    dimension stacks - fits beside the title block, notes and isometric view [00 A.8]
@@ -26,7 +26,8 @@ import os
 import FreeCAD as App
 import Part
 
-from . import analysis, dimensions, features, importer, page as page_mod, planner, shaded, templates
+from . import analysis, dimensions, features, importer, page as page_mod, planner, shaded, sheetmetal, templates
+from . import progress
 from . import threads as threads_mod
 from . import geometry as G
 from .snapshot import set_meta
@@ -143,6 +144,7 @@ def _proj_score(shape, d):
 
 
 SUBSETS = [["Front"], ["Front", "Top"], ["Front", "Right"], ["Front", "Top", "Right"]]
+REQUIRED_AUTO_VIEWS = {"Front", "Top", "Right"}
 
 
 def frame_axes(d, x):
@@ -171,7 +173,7 @@ def _thin(shape, axis, ratio=0.2):
 
 
 def choose_layout(shape, reqs, turned_axis=None, views="auto"):
-    """Pick front direction and the smallest view set showing every requirement.
+    """Pick a front direction while retaining three principal views by default.
 
     Returns ``(direction, x_direction, view_names, thickness_axis)``; a
     thickness axis means one view plus a ``t`` note is complete [02 C.3].
@@ -188,7 +190,7 @@ def choose_layout(shape, reqs, turned_axis=None, views="auto"):
         fa = frame_axes(d, x)
         front_cov = len(reqs) - len(unmet([fa["Front"]], reqs))
         z_up = 0 if abs(G.up_vector(d, x).z) > 0.99 else 1
-        for sub in ([fixed] if fixed else SUBSETS):
+        for sub in ([fixed] if fixed else [s for s in SUBSETS if REQUIRED_AUTO_VIEWS.issubset(s)]):
             miss = unmet([fa[n] for n in sub if n in fa], reqs)
             t_axis = None
             if (sub == ["Front"] and miss and len(miss) == 1 and miss[0]["kind"] == "loc"
@@ -578,9 +580,12 @@ def add_balloons(doc, page, view, shape, comps, center3d):
 def create_drawing(doc, source=None, template="A3", orientation="landscape", projection="first",
                    scale="auto", views="auto", iso=True, title=None, title_block=None, notes=None,
                    auto_dimension=True, centerlines=True, page_name="Page", allow_enlarge=False,
-                   iso_style="shaded", iso_color=None, sections=True, details=True):
+                   iso_style="shaded", iso_color=None, purpose="manufacturing", sections=True, details=True):
     projection = "third" if str(projection).lower().startswith("third") else "first"
+    progress.reset()
+    progress.stage("import", source=str(source))
     obj, src_info = load_source(doc, source)
+    progress.stage("analyse", faces=len(obj.Shape.Faces), solids=len(obj.Shape.Solids))
     warnings = list(src_info["warnings"])
     # modelled threads: orthographic views use the ISO 6410 drawing geometry
     draw_obj, thr, thr_warn = drawing_geometry(doc, obj) if auto_dimension or centerlines else (obj, [], [])
@@ -606,12 +611,20 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     reqs, _ = (features.requirements(shape, turned_axis, assembly=bool(info.get("assembly")), threads=thr)
                if auto_dimension else ([], {}))
     tap_review = tapdrill_review(reqs)
+    # Bent sheet metal: one thickness, outside faces, inside bend radii [15]
+    sheet_info = sheetmetal.detect(shape) if auto_dimension and not info.get("assembly") else None
+    if sheet_info:
+        reqs, _ = sheetmetal.filter_requirements(reqs, shape, sheet_info)
+        info["kind"] = "sheet"
+    progress.stage("choose_views", requirements=len(reqs))
     front_dir, front_x, names, t_axis = choose_layout(shape, reqs, turned_axis, views)
     thickness = None
     if t_axis:
         bb3 = G.exact_bbox(shape)
         thickness = getattr(bb3, t_axis + "Length")
         reqs = [r for r in reqs if not (r["kind"] == "loc" and r["axis"] == t_axis)]
+    if sheet_info and not thickness:
+        thickness = sheet_info["t"]
     grp = doc.addObject("TechDraw::DrawProjGroup", "ProjGroup")
     page.addView(grp)
     grp.Source = [draw_obj]
@@ -619,6 +632,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     grp.ScaleType = "Custom"
     grp.Scale = 1.0
     grp.AutoDistribute = False
+    progress.stage("projection", view="Front", direction=[round(c, 4) for c in front_dir])
     anchor = grp.addProjection("Front")
     doc.recompute()
     anchor = grp.Anchor if getattr(grp, "Anchor", None) is not None else anchor
@@ -626,6 +640,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     anchor.XDirection = front_x
     for n in names:
         if n != "Front":
+            progress.stage("projection", view=n)
             grp.addProjection(n)
     doc.recompute()
     vobjs = {str(v.Type): v for v in grp.Views}
@@ -644,6 +659,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         specs_, unplaced_ = planner.realize(reqs, geoms_, occ_)
         return geoms_, specs_, unplaced_
 
+    progress.stage("plan_dimensions", views=list(names))
     geoms, specs, unplaced = _plan()
     if auto_dimension and (views == "auto" or not views):
         # Completeness first: add views until every requirement is placed and
@@ -658,6 +674,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
             if len(names) >= 4:
                 break
             before = badness(specs, unplaced)
+            progress.stage("projection", view=extra, reason="augment")
             grp.addProjection(extra)
             doc.recompute()
             v_new = next(v for v in grp.Views if str(v.Type) == extra)
@@ -678,7 +695,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
                 vobjs.pop(extra, None)
                 doc.recompute()
         used = {sp["view"].name for sp in specs}
-        redundant = [n for n in names if n != "Front" and n not in used]
+        redundant = [n for n in names if n not in REQUIRED_AUTO_VIEWS and n not in used]
         if redundant:
             for n in redundant:
                 grp.removeProjection(n)
@@ -731,6 +748,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         doc.recompute()
         iso_local = G.view_local_bbox(iso_view) or [0, 0, 0, 0]
 
+    progress.stage("layout")
     # scale search ----------------------------------------------------------
     if scale == "auto" or scale is None:
         cands = (list(reversed(ENLARGEMENT_SCALES)) if allow_enlarge else []) + REDUCTION_SCALES
@@ -794,6 +812,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         try:
             center = ((iso_box[0] + iso_box[2]) / 2.0, (iso_box[1] + iso_box[3]) / 2.0)
             color = tuple(iso_color) if iso_color else shaded.part_color(obj)
+            progress.stage("iso_render")
             img, _, _ = shaded.place_shaded_iso(doc, page, obj.Shape, iso_view, iso_s, center, color)
             doc.removeObject(iso_view.Name)
             iso_view = img
@@ -811,6 +830,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         doc.recompute()
     for g in geoms:
         g.scale = G.view_scale(g.view)
+    progress.stage("place_dimensions", count=len(specs))
     created = dimensions.place(specs, page, doc) if auto_dimension else []
     for d in created:
         _style_dim(d)
@@ -841,6 +861,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     page_mod.set_title_block(page, fields)
     from . import sections as section_views
 
+    progress.stage("sections_details")
     extra = section_views.add_sections_and_details(
         doc, page, shape, geoms, specs, reqs, info, s,
         keepouts=[box for box in (iso_box, notes_box, pl_box) if box],
@@ -869,10 +890,13 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     doc.recompute()  # measured values must be current before duplicate detection
     removed = dimensions.dedupe(page, doc)
     doc.recompute()
-    set_meta(page, generator=GENERATOR, dedupe_ran=True, source=obj.Name, part_kind=info["kind"],
+    set_meta(page, generator=GENERATOR, dedupe_ran=True, purpose=purpose, source=obj.Name, part_kind=info["kind"],
              projection=projection, views=names, iso=iso_view.Name if iso_view else None,
              notes=[n.Name for n in note_objs], assembly=bool(info.get("assembly")),
-             thickness=thickness, unplaced=unplaced, components=[{k: c[k] for k in ("item", "qty", "name")} for c in src_info["components"]],
+             thickness=thickness, unplaced=unplaced,
+             sheet=({"t": sheet_info["t"], "inside_radii": sheet_info["inner_radii"],
+                     "bends": len(sheet_info["bends"])} if sheet_info else None),
+             components=[{k: c[k] for k in ("item", "qty", "name")} for c in src_info["components"]],
              iso_shaded=bool(iso_view is not None and iso_view.TypeId == "TechDraw::DrawViewImage"),
              threads=[threads_mod.summary(t) for t in thr], tapdrill_review=tap_review,
              drawing_geometry=draw_obj.Name if draw_obj is not obj else None,
@@ -880,6 +904,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
              coverage_gaps=coverage_gaps,
              standards_review_required=True)
     doc.recompute()
+    timings = progress.finish()
     return {
         "document": doc.Name,
         "page": page.Name,
@@ -899,6 +924,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         "details": extra["details"],
         "duplicates_removed": removed,
         "unplaced": unplaced,
+        "timings": timings,
         "warnings": warnings,
     }
 

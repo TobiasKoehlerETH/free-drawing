@@ -113,9 +113,32 @@ def geometry_edge_count(view):
     """Number of projected (non-cosmetic) edges; cosmetic/centre lines follow them."""
     wait_for_geometry(view)
     try:
-        return len(view.getVisibleEdges()) + len(view.getHiddenEdges())
+        # TechDraw includes cosmetics in getVisibleEdges(), despite the name.
+        return (len(view.getVisibleEdges()) + len(view.getHiddenEdges())
+                - len(view.CosmeticEdges) - len(view.CenterLines))
     except Exception:
         return None
+
+
+def auxiliary_edge(view, index):
+    """Return the cosmetic/centre-line object for a zero-based projected index.
+
+    These TechDraw selection methods use the same EdgeN numbering as
+    getEdgeByIndex, including Edge0 (verified with FreeCAD 1.1).
+    """
+    for property_name, method, kind in (
+        ("CosmeticEdges", "getCosmeticEdgeBySelection", "cosmetic"),
+        ("CenterLines", "getCenterLineBySelection", "centerline"),
+    ):
+        if not getattr(view, property_name, []):
+            continue
+        try:
+            obj = getattr(view, method)(f"Edge{index}")
+            if obj is not None:
+                return obj, kind
+        except Exception:
+            pass
+    return None
 
 
 def iter_edges(view, limit=5000, geom_only=True):
@@ -123,16 +146,14 @@ def iter_edges(view, limit=5000, geom_only=True):
 
     ``geom_only`` skips cosmetic edges and centre lines TechDraw appends.
     """
-    if geom_only:
-        n = geometry_edge_count(view)
-        if n is not None:
-            limit = min(limit, n)
+    wait_for_geometry(view)
     for i in range(limit):
         try:
             e = view.getEdgeByIndex(i)
         except Exception:
             return
-        yield i, e
+        if not geom_only or auxiliary_edge(view, i) is None:
+            yield i, e
 
 
 def iter_vertices(view, limit=5000):

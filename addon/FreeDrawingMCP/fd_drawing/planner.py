@@ -51,6 +51,7 @@ class Realizer:
         self.points = {(vg.name, la): vg.feature_points(la) for vg in view_geoms for la in ("x", "y")}
         self.specs = []
         self.unplaced = []
+        self.angle_normals = []
         self.dia_views = {}  # hole group -> view name (affinity for centre positions)
 
     # ------------------------------------------------------------ helpers
@@ -255,8 +256,20 @@ class Realizer:
                            "side": side, "span": (p0[0], p1[0]), "hidden": False})
 
     def angle(self, r):
+        """Angle of an inclined face against an axis-parallel edge of the same view.
+
+        Prefer an edge sharing a corner with the slant; otherwise (bent sheet
+        metal, ribs: a bend arc or fillet sits between them) use the nearest
+        long axis-parallel edge - TechDraw measures between the extended lines.
+        Parallel inclined faces (both skins of a sheet, opposite rib faces)
+        state one angle only [04].
+        """
         face = r["face"]
         n = App.Vector(face.Surface.Axis)
+        n.normalize()
+        for done in self.angle_normals:
+            if abs(abs(done.dot(n)) - 1) < 1e-6:
+                return  # same angle already dimensioned
         best = None
         for vg in self.views:
             if abs(n.dot(vg.direction)) > 1e-4:
@@ -266,28 +279,33 @@ class Realizer:
                 L = math.hypot(dx, dy)
                 if L < 1e-6 or min(abs(dx), abs(dy)) < 1e-4 * L:
                     continue  # axis-parallel line
-                # adjacent axis-parallel line sharing an end point
+                # the slant must be the edge-on image of this face
+                ln = (-dy / L, dx / L)
+                n2 = vg.xdir * ln[0] + vg.up * ln[1]
+                if abs(abs(n2.dot(n)) - 1) > 1e-4:
+                    continue
                 for j, q0, q1, vis2 in vg.lines:
                     if j == i:
                         continue
                     ex, ey = q1[0] - q0[0], q1[1] - q0[1]
-                    if min(abs(ex), abs(ey)) > 1e-6:
+                    M = math.hypot(ex, ey)
+                    if M < 1e-6 or min(abs(ex), abs(ey)) > 1e-6:
                         continue
-                    shared = next((p for p in (p0, p1) for q in (q0, q1) if G.dist(p, q) < 1e-3), None)
-                    if shared is None:
+                    vertex = _intersection(p0, p1, q0, q1)
+                    if vertex is None:
                         continue
-                    score = self._score(vg, visible and vis2)
+                    shared = any(G.dist(pp, qq) < 1e-3 for pp in (p0, p1) for qq in (q0, q1))
+                    gap = min(G.dist(pp, qq) for pp in (p0, p1) for qq in (q0, q1))
+                    score = (self._score(vg, visible and vis2) + (5 if shared else 0), -gap, M)
                     if best is None or score > best[0]:
-                        best = (score, vg, i, j, shared)
+                        best = (score, vg, i, j, vertex)
         if best is None:
             self.unplaced.append(_describe(r))
             return
-        _, vg, i, j, shared = best
-        cx, cy = 0.5 * (vg.bbox[0] + vg.bbox[2]), 0.5 * (vg.bbox[1] + vg.bbox[3])
-        d = (shared[0] - cx, shared[1] - cy)
-        L = math.hypot(*d) or 1.0
+        self.angle_normals.append(n)
+        _, vg, i, j, vertex = best
         self.specs.append({"view": vg, "type": "Angle", "refs": [f"Edge{i}", f"Edge{j}"], "format": "%.1w°",
-                           "role": "angle", "circle": {"center": shared, "radius": 0.0}, "estimate": "000.0°"})
+                           "role": "angle", "circle": {"center": vertex, "radius": 0.0}, "estimate": "000.0°"})
 
     def pcd(self, r):
         for vg in self.views:
@@ -297,6 +315,17 @@ class Realizer:
                                    "circle": {"center": _project(vg, r["center"]), "radius": r["dia"] / 2.0}})
                 return
         self.unplaced.append(_describe(r))
+
+
+def _intersection(p0, p1, q0, q1):
+    """Intersection of the infinite lines p0-p1 and q0-q1, or None if parallel."""
+    d1 = (p1[0] - p0[0], p1[1] - p0[1])
+    d2 = (q1[0] - q0[0], q1[1] - q0[1])
+    den = d1[0] * d2[1] - d1[1] * d2[0]
+    if abs(den) < 1e-12:
+        return None
+    t = ((q0[0] - p0[0]) * d2[1] - (q0[1] - p0[1]) * d2[0]) / den
+    return (p0[0] + t * d1[0], p0[1] + t * d1[1])
 
 
 def _coord3(p, axis):

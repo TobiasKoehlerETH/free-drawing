@@ -1,0 +1,785 @@
+{
+  "units": "mm",
+  "purpose": "Synthetic drawing stress tests; no manufacturing specification",
+  "generator": "samples/generate_stress_parts.py",
+  "freecad_version": [
+    "1",
+    "1",
+    "1",
+    "20260414 (Git shallow)",
+    "Unknown",
+    "2026/04/14 22:09:59",
+    "(HEAD detached at 0108fd4b4)",
+    "0108fd4b4850cc46e625b60e53cea7a7bbe69f8d"
+  ],
+  "cases": [
+    {
+      "name": "stress_nested_cavity",
+      "source": "samples/stress/stress_nested_cavity.step",
+      "features": "Two pocket depths, recessed hollow boss, four blind rim holes",
+      "expected_solids": 1,
+      "sha256": "2ab76f7554381ef97ee0efe50feaef59693f0e5218c244ee2fedd4c65b71cd34",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 28,
+        "edges": 54,
+        "volume_mm3": 188144.72521395245,
+        "bounds_mm": [
+          96.0,
+          76.0,
+          52.0
+        ],
+        "coarse_bounds_mm": [
+          96.0,
+          76.0,
+          52.0
+        ],
+        "surfaces": {
+          "Plane": 22,
+          "Cylinder": 6
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 28,
+        "edges": 54,
+        "volume_mm3": 188144.72521395245,
+        "bounds_mm": [
+          96.0,
+          76.0,
+          52.0
+        ],
+        "coarse_bounds_mm": [
+          96.0,
+          76.0,
+          52.0
+        ],
+        "surfaces": {
+          "Plane": 22,
+          "Cylinder": 6
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "overall_mm": [
+          96,
+          76,
+          52
+        ],
+        "upper_pocket_xy_mm": [
+          80,
+          60
+        ],
+        "upper_pocket_depth_mm": 38,
+        "lower_pocket_xy_mm": [
+          52,
+          34
+        ],
+        "lower_pocket_extra_depth_mm": 8,
+        "boss_od_id_mm": [
+          20,
+          8
+        ],
+        "boss_top_z_mm": 28,
+        "rim_holes_count": 4,
+        "rim_holes_diameter_mm": 3,
+        "rim_holes_depth_mm": 18
+      }
+    },
+    {
+      "name": "stress_skew_passages",
+      "source": "samples/stress/stress_skew_passages.step",
+      "features": "Three intersecting bores with non-principal axes",
+      "expected_solids": 1,
+      "sha256": "138b48a38ec867611f248eee40c5cbdc90009934e3b28b22beb5457a1017bb78",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 11,
+        "edges": 27,
+        "volume_mm3": 308617.9731055305,
+        "bounds_mm": [
+          84.00000019999999,
+          68.00000020000002,
+          56.00000020000004
+        ],
+        "coarse_bounds_mm": [
+          93.67000101935912,
+          76.0508553449013,
+          60.72301528364194
+        ],
+        "surfaces": {
+          "Plane": 6,
+          "Cylinder": 5
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 11,
+        "edges": 27,
+        "volume_mm3": 308617.97500009614,
+        "bounds_mm": [
+          84.00000020000383,
+          68.00000020001687,
+          56.00000020001084
+        ],
+        "coarse_bounds_mm": [
+          93.43319515112545,
+          75.82906460055713,
+          60.593727140150015
+        ],
+        "surfaces": {
+          "Plane": 6,
+          "Cylinder": 5
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "overall_mm": [
+          84,
+          68,
+          56
+        ],
+        "bore_diameters_mm": [
+          10,
+          7,
+          5
+        ],
+        "bore_meeting_point_mm": [
+          42,
+          34,
+          28
+        ],
+        "bore_axis_direction_ratios": [
+          [
+            1,
+            0.35,
+            0.4
+          ],
+          [
+            -0.3,
+            1,
+            0.6
+          ],
+          [
+            0.45,
+            -0.25,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "name": "stress_spline_loft",
+      "source": "samples/stress/stress_spline_loft.step",
+      "features": "Four twisted periodic spline profiles and varying cross-section",
+      "expected_solids": 1,
+      "sha256": "a62cd002b040934e90090c69e1f0e7ab907b9a550a46e5ac2139ded9d4137376",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 3,
+        "edges": 3,
+        "volume_mm3": 60852.56747212323,
+        "bounds_mm": [
+          55.61322153845184,
+          40.343520378152704,
+          66.0000002
+        ],
+        "coarse_bounds_mm": [
+          68.00733229834766,
+          51.182255969073424,
+          66.00000000000003
+        ],
+        "surfaces": {
+          "BSplineSurface": 1,
+          "Plane": 2
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 3,
+        "edges": 3,
+        "volume_mm3": 60852.56747224448,
+        "bounds_mm": [
+          55.613221538447725,
+          40.34352037814912,
+          66.00000019999999
+        ],
+        "coarse_bounds_mm": [
+          68.007332298341,
+          51.182255969072,
+          66.0
+        ],
+        "surfaces": {
+          "BSplineSurface": 1,
+          "Plane": 2
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "section_z_mm": [
+          0,
+          18,
+          42,
+          66
+        ],
+        "base_radii_mm": [
+          24,
+          18,
+          20,
+          12
+        ],
+        "section_x_shift_mm": [
+          0,
+          5,
+          12,
+          18
+        ],
+        "section_twist_rad": [
+          0,
+          0.2,
+          0.55,
+          0.8
+        ],
+        "profile_definition": "Periodic interpolating B-spline through 12 polar samples; r=base_r*(1+0.12*cos(3*theta)); y multiplier 0.8"
+      }
+    },
+    {
+      "name": "stress_curved_tube",
+      "source": "samples/stress/stress_curved_tube.step",
+      "features": "120 degree toroidal tube, 16 outside/8 inside diameter",
+      "expected_solids": 1,
+      "sha256": "67f24f7532c8476a088f0e77b095bdb3e1f842dc4ad2047a57d2da89231e5378",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 4,
+        "edges": 6,
+        "volume_mm3": 11053.95692922008,
+        "bounds_mm": [
+          64.5,
+          43.0000001,
+          16.0000002
+        ],
+        "coarse_bounds_mm": [
+          69.8142969188594,
+          46.54286461257294,
+          16.0
+        ],
+        "surfaces": {
+          "Toroid": 2,
+          "Plane": 2
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 4,
+        "edges": 6,
+        "volume_mm3": 11053.956929220438,
+        "bounds_mm": [
+          64.50000000000152,
+          43.0000001,
+          16.0000002
+        ],
+        "coarse_bounds_mm": [
+          69.81429691886123,
+          46.54286461257294,
+          16.0
+        ],
+        "surfaces": {
+          "Toroid": 2,
+          "Plane": 2
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "centreline_radius_mm": 35,
+        "outside_diameter_mm": 16,
+        "inside_diameter_mm": 8,
+        "sweep_angle_degrees": 120,
+        "wall_thickness_mm": 4
+      }
+    },
+    {
+      "name": "stress_slender_shaft",
+      "source": "samples/stress/stress_slender_shaft.step",
+      "features": "850 mm shaft, taper, end collar, two 0.7 mm grooves",
+      "expected_solids": 1,
+      "sha256": "46186ec2d7b237d1478f40740e0554cc9ce400a12fb05ccf6c44bcfe0f5243b0",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 14,
+        "edges": 20,
+        "volume_mm3": 44402.591981824946,
+        "bounds_mm": [
+          850.0,
+          14.0,
+          14.0
+        ],
+        "coarse_bounds_mm": [
+          850.0,
+          14.0,
+          14.0
+        ],
+        "surfaces": {
+          "Cylinder": 6,
+          "Plane": 7,
+          "Cone": 1
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 14,
+        "edges": 20,
+        "volume_mm3": 44402.59198186369,
+        "bounds_mm": [
+          850.0,
+          14.0,
+          14.0
+        ],
+        "coarse_bounds_mm": [
+          850.0,
+          14.0,
+          14.0
+        ],
+        "surfaces": {
+          "Cylinder": 6,
+          "Plane": 7,
+          "Cone": 1
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "overall_length_mm": 850,
+        "body_diameter_mm": 8,
+        "taper_end_diameters_mm": [
+          14,
+          8
+        ],
+        "taper_length_mm": 20,
+        "end_collar_diameter_mm": 12,
+        "end_collar_length_mm": 12,
+        "groove_start_x_mm": [
+          26,
+          822
+        ],
+        "groove_width_mm": 0.7,
+        "groove_root_diameter_mm": 6.8
+      }
+    },
+    {
+      "name": "stress_large_support",
+      "source": "samples/stress/stress_large_support.step",
+      "features": "2400 mm base with two hollow towers and six through holes",
+      "expected_solids": 1,
+      "sha256": "928635e8b5000912ed9deb95116dee46e1ec84966f814f2c24d88cde987874c4",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 32,
+        "edges": 78,
+        "volume_mm3": 420867129.2657707,
+        "bounds_mm": [
+          2400.0,
+          1400.0,
+          620.0
+        ],
+        "coarse_bounds_mm": [
+          2400.0,
+          1400.0,
+          620.0
+        ],
+        "surfaces": {
+          "Plane": 26,
+          "Cylinder": 6
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 32,
+        "edges": 78,
+        "volume_mm3": 420867129.2657707,
+        "bounds_mm": [
+          2400.0,
+          1400.0,
+          620.0
+        ],
+        "coarse_bounds_mm": [
+          2400.0,
+          1400.0,
+          620.0
+        ],
+        "surfaces": {
+          "Plane": 26,
+          "Cylinder": 6
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "base_mm": [
+          2400,
+          1400,
+          120
+        ],
+        "towers_count": 2,
+        "tower_outer_xy_mm": [
+          200,
+          300
+        ],
+        "tower_inner_xy_mm": [
+          160,
+          260
+        ],
+        "tower_height_mm": 500,
+        "holes_count": 6,
+        "holes_diameter_mm": 36,
+        "hole_x_mm": [
+          120,
+          1200,
+          2280
+        ],
+        "hole_y_mm": [
+          120,
+          1280
+        ]
+      }
+    },
+    {
+      "name": "stress_dense_pattern",
+      "source": "samples/stress/stress_dense_pattern.step",
+      "features": "48 holes, alternating diameters, 16 conical recesses",
+      "expected_solids": 1,
+      "sha256": "56e7a214aa5146cbd720a01045566eefaf7db1f537e1c216da184dea3ebf2b21",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 70,
+        "edges": 188,
+        "volume_mm3": 70196.78764751287,
+        "bounds_mm": [
+          110.0,
+          85.0,
+          8.000000000000004
+        ],
+        "coarse_bounds_mm": [
+          110.0,
+          85.0,
+          8.0
+        ],
+        "surfaces": {
+          "Plane": 6,
+          "Cone": 16,
+          "Cylinder": 48
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 70,
+        "edges": 188,
+        "volume_mm3": 70196.78764751252,
+        "bounds_mm": [
+          110.0,
+          85.0,
+          8.000000000000007
+        ],
+        "coarse_bounds_mm": [
+          110.0,
+          85.0,
+          8.00000000000081
+        ],
+        "surfaces": {
+          "Plane": 6,
+          "Cone": 16,
+          "Cylinder": 48
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "overall_mm": [
+          110,
+          85,
+          8
+        ],
+        "hole_grid_xy": [
+          8,
+          6
+        ],
+        "holes_count": 48,
+        "hole_diameters_mm": [
+          3.2,
+          4.2
+        ],
+        "hole_count_each_diameter": [
+          24,
+          24
+        ],
+        "grid_pitch_mm": [
+          12,
+          12
+        ],
+        "first_hole_xy_mm": [
+          13,
+          12.5
+        ],
+        "conical_recesses_count": 16,
+        "conical_recess_depth_mm": 1.8,
+        "conical_recess_outer_diameters_mm": [
+          6.8,
+          7.8
+        ],
+        "conical_recess_included_angle_degrees": 90
+      }
+    },
+    {
+      "name": "stress_mixed_scale_assembly",
+      "source": "samples/stress/stress_mixed_scale_assembly.step",
+      "features": "Ten separate solids from a 180 mm frame to a 0.6 mm washer",
+      "expected_solids": 10,
+      "sha256": "d5dc5bb19b02af1cb8896876babc530826f71345e984806b193f0e4bcb24e8e3",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 10,
+        "faces": 40,
+        "edges": 60,
+        "volume_mm3": 209105.17007926395,
+        "bounds_mm": [
+          180.0,
+          100.0,
+          50.0
+        ],
+        "coarse_bounds_mm": [
+          180.0,
+          100.0,
+          50.0
+        ],
+        "surfaces": {
+          "Plane": 28,
+          "Cylinder": 12
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 10,
+        "faces": 40,
+        "edges": 60,
+        "volume_mm3": 209105.17007926392,
+        "bounds_mm": [
+          180.0,
+          100.0,
+          50.0
+        ],
+        "coarse_bounds_mm": [
+          180.0,
+          100.0,
+          50.0
+        ],
+        "surfaces": {
+          "Plane": 28,
+          "Cylinder": 12
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "solids_count": 10,
+        "frame_outer_mm": [
+          180,
+          100,
+          12
+        ],
+        "frame_opening_xy_mm": [
+          140,
+          60
+        ],
+        "rollers_count": 2,
+        "roller_od_id_length_mm": [
+          36,
+          5,
+          46
+        ],
+        "axles_count": 2,
+        "axle_diameter_length_mm": [
+          4,
+          76
+        ],
+        "small_pins_count": 4,
+        "small_pin_diameter_length_mm": [
+          2.4,
+          8
+        ],
+        "washer_od_id_thickness_mm": [
+          6,
+          3.2,
+          0.6
+        ]
+      }
+    },
+    {
+      "name": "stress_splined_coupling",
+      "source": "samples/stress/stress_splined_coupling.step",
+      "features": "24 straight-sided external teeth with through bore and keyway",
+      "expected_solids": 1,
+      "sha256": "5d48a0f0232af12ce8a60cdb390f8caafc16b39b37c7b3c6377b27562061944a",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 102,
+        "edges": 300,
+        "volume_mm3": 57073.01947771284,
+        "bounds_mm": [
+          51.94227349802244,
+          51.94227349802244,
+          35.0
+        ],
+        "coarse_bounds_mm": [
+          51.94227349802244,
+          51.94227349802244,
+          35.0
+        ],
+        "surfaces": {
+          "Plane": 101,
+          "Cylinder": 1
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 102,
+        "edges": 300,
+        "volume_mm3": 57073.01947770825,
+        "bounds_mm": [
+          51.942273498021855,
+          51.942273498021855,
+          35.0
+        ],
+        "coarse_bounds_mm": [
+          51.942273498021855,
+          51.942273498021855,
+          35.0
+        ],
+        "surfaces": {
+          "Plane": 101,
+          "Cylinder": 1
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "teeth_count": 24,
+        "major_minor_diameter_mm": [
+          52,
+          44
+        ],
+        "length_mm": 35,
+        "bore_diameter_mm": 18,
+        "keyway_width_mm": 5,
+        "keyway_outer_x_mm": 12,
+        "tooth_description": "Synthetic straight-sided radial teeth; not involute gear teeth"
+      }
+    },
+    {
+      "name": "stress_curved_rib_shell",
+      "source": "samples/stress/stress_curved_rib_shell.step",
+      "features": "Curved thin rib joined to base and back wall",
+      "expected_solids": 1,
+      "sha256": "531f9340719204c05d89bb0e3b46f336f75d9da09821f45f1f4565964fad935a",
+      "source_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 14,
+        "edges": 36,
+        "volume_mm3": 53503.47276747743,
+        "bounds_mm": [
+          90.0,
+          65.0,
+          41.0
+        ],
+        "coarse_bounds_mm": [
+          90.0,
+          65.0,
+          41.0
+        ],
+        "surfaces": {
+          "Plane": 10,
+          "Cylinder": 4
+        }
+      },
+      "step_geometry": {
+        "valid": true,
+        "closed": true,
+        "solids": 1,
+        "faces": 14,
+        "edges": 36,
+        "volume_mm3": 53503.47276747743,
+        "bounds_mm": [
+          90.0,
+          65.0,
+          41.0
+        ],
+        "coarse_bounds_mm": [
+          90.0,
+          65.0,
+          41.0
+        ],
+        "surfaces": {
+          "Plane": 10,
+          "Cylinder": 4
+        }
+      },
+      "roundtrip_volume_matches": true,
+      "roundtrip_bounds_match": true,
+      "feature_facts": {
+        "base_mm": [
+          90,
+          65,
+          5
+        ],
+        "back_wall_thickness_mm": 5,
+        "overall_height_mm": 41,
+        "rib_inner_outer_radii_mm": [
+          29,
+          32
+        ],
+        "rib_height_mm": 29,
+        "holes_count": 2,
+        "holes_diameter_mm": 6
+      }
+    }
+  ]
+}

@@ -30,6 +30,7 @@ except ImportError:  # mcp 2.x
 from mcp.types import ImageContent, TextContent
 
 from .backends import BackendError, HeadlessBackend, RpcBackend, detect_freecadcmd
+from . import workflow
 from .rules import catalog, highlights, inspect
 
 logger = logging.getLogger("free-drawing-mcp")
@@ -89,10 +90,11 @@ def _doc_arg(doc: str | None) -> str | None:
 
 
 def _inspect_and_render(doc: str, page: str, render: bool, verbose: bool = False, width: int = 1600,
-                        rules: list[str] | None = None, sections: list[str] | None = None):
+                        rules: list[str] | None = None, sections: list[str] | None = None,
+                        purpose: str | None = None):
     be = backend()
     snap = be.run([{"op": "snapshot", "args": {"doc": doc, "page": page}}])[0]
-    report = inspect(snap, sections=sections, rules=rules)
+    report = inspect(snap, sections=sections, rules=rules, purpose=purpose)
     out: list[Any] = [_text(report.text(verbose=verbose))]
     if render and not S.only_text:
         img = be.run([{"op": "render", "args": {"doc": doc, "page": page, "width": width,
@@ -134,6 +136,8 @@ def create_drawing(
     iso_color: list[int] | None = None,
     sections: bool = True,
     details: bool = True,
+    purpose: Literal["manufacturing", "assembly", "reference", "change_notice"] = "manufacturing",
+    layout_autofix: bool = True,
     inspect_result: bool = True,
     render: bool = True,
 ) -> list[TextContent | ImageContent]:
@@ -157,6 +161,10 @@ def create_drawing(
         views: force views, e.g. ["Front", "Top"]; default automatic.
         iso_color: RGB 0-255 for the shaded isometric.
         sections / details: add automatic cuts and enlarged feature views where needed.
+        purpose: what the drawing is for; reference/assembly/change-notice drawings
+            relax part-definition and specification checks (never physical layout checks).
+        layout_autofix: apply safe layout-only fixes (overlaps, duplicates, centre
+            lines, symbols) right after creation; never touches engineering data.
     """
     try:
         src = source
@@ -174,7 +182,7 @@ def create_drawing(
                 tb[k] = v
         args: dict[str, Any] = {"source": src, "output": out, "template": template, "projection": projection,
                                 "scale": scale, "title": title, "title_block": tb or None, "notes": notes,
-                                "sections": sections, "details": details}
+                                "sections": sections, "details": details, "purpose": purpose}
         if views:
             args["views"] = views
         if iso_color:
@@ -186,9 +194,12 @@ def create_drawing(
                  f"iso {created.get('iso_scale')} · {created['dimensions']} dimensions · {created['centerlines']} centre lines"]
         for w in created.get("warnings", []):
             lines.append(f"note: {w}")
+        if layout_autofix:
+            _, log, _ = workflow.autofix(backend(), doc, created["page"], rules=workflow.LAYOUT_RULES, purpose=purpose)
+            lines.extend(f"layout autofix {l}" for l in log)
         result: list[Any] = [_text("\n".join(lines))]
         if inspect_result:
-            _, more = _inspect_and_render(doc, created["page"], render)
+            _, more = _inspect_and_render(doc, created["page"], render, purpose=purpose)
             result.extend(more)
         return result
     except Exception as e:
@@ -204,6 +215,7 @@ def inspect_drawing(
     output: Literal["text", "json"] = "text",
     render: bool = False,
     verbose: bool = False,
+    purpose: Literal["manufacturing", "assembly", "reference", "change_notice"] | None = None,
 ) -> list[TextContent | ImageContent]:
     """Check a drawing against every guideline checklist item (A-P) in one call.
 
@@ -217,14 +229,15 @@ def inspect_drawing(
         rules: only these ids, e.g. ["E.10", "A.8"]. sections: e.g. ["E"].
         output: 'json' returns machine-readable findings.
         verbose: also list passed and not-applicable checks.
+        purpose: override the purpose recorded on the page (default manufacturing).
     """
     try:
         doc = _doc_arg(doc)
         if output == "json":
             snap = backend().run([{"op": "snapshot", "args": {"doc": doc, "page": page}}])[0]
-            rep = inspect(snap, sections=sections, rules=rules)
+            rep = inspect(snap, sections=sections, rules=rules, purpose=purpose)
             return [_text(json.dumps(rep.to_dict(include_pass=verbose), ensure_ascii=False, indent=1))]
-        _, out = _inspect_and_render(doc, page, render, verbose, rules=rules, sections=sections)
+        _, out = _inspect_and_render(doc, page, render, verbose, rules=rules, sections=sections, purpose=purpose)
         return out
     except Exception as e:
         return _err(e)
@@ -240,20 +253,7 @@ def autofix_drawing(doc: str, page: str = "auto", rules: list[str] | None = None
     """
     try:
         doc = _doc_arg(doc)
-        be = backend()
-        log = []
-        first = None
-        for n in range(max(1, max_passes)):
-            snap = be.run([{"op": "snapshot", "args": {"doc": doc, "page": page}}])[0]
-            rep = inspect(snap)
-            first = first or rep.summary()
-            acts = rep.auto_actions(rules)
-            if not acts:
-                break
-            res = be.run([{"op": "apply_actions", "args": {"doc": doc, "page": page, "actions": acts}}])[0]
-            ok = sum(1 for r in res["results"] if r["ok"])
-            log.append(f"pass {n + 1}: applied {ok}/{len(acts)} action(s)" +
-                       "".join(f"\n   ! {r['op']}: {r['error']}" for r in res["results"] if not r["ok"]))
+        _, log, first = workflow.autofix(backend(), doc, page, rules=rules, max_passes=max_passes)
         rep, out = _inspect_and_render(doc, page, render)
         head = [f"before: {first['result']} score {first['score']} ({first['fail']} fail, {first['warn']} warn)" if first else "",
                 *log, f"after: {rep.result()} score {rep.score()}"]
