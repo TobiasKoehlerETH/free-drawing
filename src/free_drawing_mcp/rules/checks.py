@@ -45,7 +45,9 @@ class Ctx:
         self.sections = [v for v in self.views if v.get("kind") == "section"]
         self.details = [v for v in self.views if v.get("kind") == "detail"]
         self.dims = snap.get("dimensions", [])
-        self.annos = snap.get("annotations", [])
+        self.annos = list(snap.get("annotations", []))
+        self.annos.extend({"name": v["name"] + "_caption", "kind": "caption", "text": [v.get("caption", "")],
+                           "bbox": v["caption_box"]} for v in self.views if v.get("caption_box"))
         self.notes = [a for a in self.annos if a.get("kind") == "note"]
         self.view_by_name = {v["name"]: v for v in self.views}
         self.all_text = "\n".join(l for a in self.annos for l in a.get("text", [])) + "\n" + \
@@ -64,6 +66,17 @@ class Ctx:
             if include_hidden:
                 for pl in v.get("polylines_hidden", []):
                     yield from g.polyline_segments(pl)
+            for cosmetic in v.get("cosmetic", []):
+                if cosmetic.get("format", {}).get("visible", True):
+                    yield from g.polyline_segments(cosmetic.get("points", []))
+            for key in ("boundary", "detail_circle"):
+                circle = v.get(key)
+                if circle:
+                    x, y = circle["center"]
+                    r = circle["radius"]
+                    points = [(x + r * math.cos(i * math.pi / 32), y + r * math.sin(i * math.pi / 32)) for i in range(65)]
+                    for a, b in zip(points, points[1:]):
+                        yield (*a, *b)
 
 
 def scale_text(s: float) -> str:
@@ -100,7 +113,7 @@ def obstacles(c: Ctx, exclude: str | None = None):
             boxes.append(v["bbox"])
     if c.tb:
         boxes.append(c.tb)
-    lines = [seg for d in c.dims if d["name"] != exclude for seg in d.get("lines", [])]
+    lines = [seg for d in c.dims if d["name"] != exclude for seg in d.get("ink_lines", d.get("lines", []))]
     return boxes, lines
 
 
@@ -239,7 +252,8 @@ def _a8(c: Ctx):
         if b and tb and g.overlap(b, tb, -0.5):
             found = True
             yield F("A.8", "fail", f"{a['name']} overlaps the title block", objects=[a["name"]], bbox=b,
-                    fix=[{"op": "set_note", "name": a["name"], "y": round(tb[3] + 3 + (b[3] - b[1]) / 2, 2)}], auto=True)
+                    fix=[{"op": "set_note", "name": a["name"], "y": round(tb[3] + 3 + (b[3] - b[1]) / 2, 2)}]
+                    if a.get("kind") != "caption" else None, auto=a.get("kind") != "caption")
     if not found:
         yield F("A.8", "pass", "nothing overlaps the title block or leaves the frame")
 
@@ -303,6 +317,11 @@ def rules_C(c: Ctx):
         yield F("C.1", "review", "front view shows the functional orientation")
     proj = c.s.get("projection") or "first"
     bad = False
+    standard_scales = {round(v["scale"], 8) for v in c.ortho if v.get("scale")}
+    if len(standard_scales) > 1:
+        bad = True
+        yield F("C.2", "fail", "standard orthographic views use different scales",
+                objects=[v["name"] for v in c.ortho], hint="use one shared scale for all standard views; label enlarged details separately")
     if front is not None:
         fc = front["center"]
         for v in c.ortho:
@@ -327,12 +346,14 @@ def rules_C(c: Ctx):
     if not bad:
         yield F("C.2", "pass", f"views follow {proj}-angle arrangement and stay aligned")
     used = {d.get("view") for d in c.dims}
-    redundant = [v["name"] for v in c.ortho if v is not front and v["name"] not in used]
+    strict = c.meta.get("dimensioned_only", False)
+    candidates = c.ortho + c.sections + c.details
+    redundant = [v["name"] for v in candidates if v["name"] not in used]
     if redundant:
-        yield F("C.3", "warn", "orthographic view(s) carry no dimension - possibly redundant", objects=redundant,
-                fix=[{"op": "delete", "names": redundant}], hint="keep only views that define something")
+        yield F("C.3", "fail" if strict else "warn", "view(s) carry no dimension - possibly redundant", objects=redundant,
+                hint="assign a needed dimension or hide the view; retain projection anchors and section/detail parents")
     else:
-        yield F("C.3", "pass", f"{len(c.ortho)} orthographic view(s), each carries information")
+        yield F("C.3", "pass", f"{len(candidates)} defining view(s), each carries a dimension")
     loose = [v for v in c.ortho if not v.get("group") and not (v.get("caption") or "").strip()]
     loose += [v for v in c.sections + c.details if not (v.get("caption") or v.get("section_symbol") or v.get("reference"))]
     if loose:
@@ -589,8 +610,10 @@ def _e10(c: Ctx):
         if d["name"] in {o[1]["name"] for o in out}:
             continue
         tb = g.expand(d["text_box"], -0.3)
-        other_lines = [sg for o in c.dims if o["name"] != d["name"] for sg in o.get("lines", [])]
-        if any(g.seg_box(sg, tb) for sg in other_lines):
+        other_lines = [sg for o in c.dims if o["name"] != d["name"] for sg in o.get("ink_lines", o.get("lines", []))]
+        if any(g.seg_box(sg, tb) for sg in d.get("ink_lines", [])):
+            out.append(("line", d, "its own dimension or extension line"))
+        elif any(g.seg_box(sg, tb) for sg in other_lines):
             out.append(("line", d, "another dimension's line"))
         elif any(g.seg_box(sg, tb) for sg in segs):
             out.append(("geometry", d, "part geometry"))
@@ -608,14 +631,18 @@ def _e10(c: Ctx):
                 fix=[{"op": "move_dimension", "name": d["name"], "x": spot[0], "y": spot[1]}] if spot else None, auto=bool(spot),
                 hint=None if spot else "no free spot nearby - move the view or use a larger sheet")
     crossings = []
-    dim_lines = [(d["name"], d["lines"][0]) for d in c.dims if d.get("lines")]
+    dim_lines = [(d["name"], d.get("ink_lines", d["lines"])[0]) for d in c.dims if d.get("lines")]
     for i, (na, la) in enumerate(dim_lines):
         for nb, lb in dim_lines[i + 1:]:
-            if g.seg_seg(la, lb):
+            if g.seg_seg(la, lb) or g.collinear_overlap(la, lb):
                 crossings.append(f"{na}/{nb}")
     if crossings:
-        yield F("E.10", "warn", "dimension lines cross each other", objects=crossings[:8])
-    if not out and not crossings:
+        yield F("E.10", "fail" if c.meta.get("dimensioned_only") else "warn", "dimension lines cross or overlap each other", objects=crossings[:8])
+    remaining = (c.meta.get("annotation_clearance") or {}).get("unresolved", [])
+    if remaining:
+        yield F("E.10", "fail", "annotation clearance could not be resolved during creation", objects=remaining,
+                hint="rearrange annotations or use a larger sheet; text and line sizes were preserved")
+    if not out and not crossings and not remaining:
         yield F("E.10", "pass", "no overlapping dimension text, lines or leaders")
 
 

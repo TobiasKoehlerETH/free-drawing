@@ -32,6 +32,7 @@ samples/validation/
 samples/recheck/
 samples/final-check/
 samples/validation-2026-10-18/
+samples/desktop-ui-validation/
 .codegraph/
 
 # Sample batch output: only the summary table is tracked

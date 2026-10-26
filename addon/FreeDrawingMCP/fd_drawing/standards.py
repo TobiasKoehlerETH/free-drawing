@@ -20,8 +20,8 @@ LINE_THICK = 0.7
 LINE_THIN = 0.35
 CENTER_LINE_STYLE = 4  # TechDraw line style index: dash-dot (ISO 128 type G)
 
-# ISO 5455 preferred scales. Project override [README]: orthographic views stay
-# 1:1 unless they do not fit, so only reductions are tried by default.
+# Preferred scales: automatic layout uses the largest that fits the views and
+# their annotations. All standard views share the projection group's scale.
 REDUCTION_SCALES = [1.0, 1 / 2, 1 / 5, 1 / 10, 1 / 20, 1 / 50, 1 / 100]
 ENLARGEMENT_SCALES = [2.0, 5.0, 10.0]
 ISO_VIEW_SCALE = 0.5  # project override: compact isometric at 1:2

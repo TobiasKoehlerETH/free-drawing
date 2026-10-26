@@ -136,6 +136,8 @@ def create_drawing(
     iso_color: list[int] | None = None,
     sections: bool = True,
     details: bool = True,
+    dimensioned_only: bool = True,
+    section_cut_only: bool = False,
     purpose: Literal["manufacturing", "assembly", "reference", "change_notice"] = "manufacturing",
     layout_autofix: bool = True,
     inspect_result: bool = True,
@@ -146,7 +148,8 @@ def create_drawing(
     Picks the front view and the smallest view set that shows every feature,
     dimensions it per guidelines/04 (baseline/ordinate from datums, hole
     callouts like '4× ⌀6 THRU', radii, chamfers, angles, PCDs), adds centre
-    lines, a full-colour isometric bottom-right, notes and the title block.
+    lines, notes and the title block. Defining views carry dimensions; a coloured
+    isometric recognition view stays at the bottom right without dimensions.
 
     Args:
         source: STEP/IGES/BREP file, or an .FCStd file (its largest solid), or
@@ -154,13 +157,16 @@ def create_drawing(
         output: .FCStd to save (default: '<source>_drawing.FCStd' next to the source).
         template: sheet 'A4'..'A0' or a template SVG path.
         projection: 'first' (ISO default) or 'third'.
-        scale: 'auto' (1:1 unless it does not fit) or e.g. '1:2'.
+        scale: 'auto' (largest fitting preferred scale, shared by standard views) or e.g. '1:2'.
         material / drawing_number / creator / title: title block shortcuts.
         title_block: any other ISO template fields, e.g. {"approval_person": "B. Lee"}.
         notes: general notes (default: units and ISO 8015). Supply manufacturing requirements explicitly.
         views: force views, e.g. ["Front", "Top"]; default automatic.
         iso_color: RGB 0-255 for the shaded isometric.
         sections / details: add automatic cuts and enlarged feature views where needed.
+        dimensioned_only: default True; omit undimensioned defining views while
+            retaining the coloured isometric at the bottom right and hidden dependency objects.
+        section_cut_only: project exact cut faces without geometry beyond the section plane.
         purpose: what the drawing is for; reference/assembly/change-notice drawings
             relax part-definition and specification checks (never physical layout checks).
         layout_autofix: apply safe layout-only fixes (overlaps, duplicates, centre
@@ -182,7 +188,8 @@ def create_drawing(
                 tb[k] = v
         args: dict[str, Any] = {"source": src, "output": out, "template": template, "projection": projection,
                                 "scale": scale, "title": title, "title_block": tb or None, "notes": notes,
-                                "sections": sections, "details": details, "purpose": purpose}
+                                "sections": sections, "details": details, "purpose": purpose,
+                                "dimensioned_only": dimensioned_only, "section_cut_only": section_cut_only}
         if views:
             args["views"] = views
         if iso_color:

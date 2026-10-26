@@ -67,6 +67,7 @@ def test_create_drawing_schema():
     props = schema["properties"]
     assert schema["required"] == ["source"]
     assert {"source", "output", "template", "projection", "scale", "material"} <= set(props)
+    assert props["dimensioned_only"]["default"] is True
 
 
 def test_guideline_resources_resolve():

@@ -4,10 +4,10 @@ Pipeline (each step cites the guideline it implements):
 
 1. classify the part (plate / turned / prismatic) and pick the front view that
    shows the most visible and fewest hidden edges [02 C.1]
-2. retain front/top/right as the minimum automatic view set, with additional
+2. pick the minimum view set that covers the part's features, with additional
    views where needed for feature coverage [02 C.2 C.3]
 3. plan dimensions (holes, diameters, baseline coordinates) [04]
-4. choose the largest ISO 5455 scale (1:1 preferred) whose layout - views plus
+4. choose the largest preferred scale whose layout - views plus
    dimension stacks - fits beside the title block, notes and isometric view [00 A.8]
 5. place views, dimensions, centre lines [01 B.3], compact isometric 1:2 in
    the bottom-right zone [C.7], general notes and title block [00 05 14]
@@ -28,6 +28,7 @@ import Part
 
 from . import analysis, dimensions, features, importer, page as page_mod, planner, shaded, sheetmetal, templates
 from . import progress
+from .layout_policy import balanced_stacks, preserves_coverage, retain_parent_dimensions
 from . import threads as threads_mod
 from . import geometry as G
 from .snapshot import set_meta
@@ -144,7 +145,6 @@ def _proj_score(shape, d):
 
 
 SUBSETS = [["Front"], ["Front", "Top"], ["Front", "Right"], ["Front", "Top", "Right"]]
-REQUIRED_AUTO_VIEWS = {"Front", "Top", "Right"}
 
 
 def frame_axes(d, x):
@@ -173,7 +173,7 @@ def _thin(shape, axis, ratio=0.2):
 
 
 def choose_layout(shape, reqs, turned_axis=None, views="auto"):
-    """Pick a front direction while retaining three principal views by default.
+    """Pick front direction and the smallest view set showing every requirement.
 
     Returns ``(direction, x_direction, view_names, thickness_axis)``; a
     thickness axis means one view plus a ``t`` note is complete [02 C.3].
@@ -190,7 +190,7 @@ def choose_layout(shape, reqs, turned_axis=None, views="auto"):
         fa = frame_axes(d, x)
         front_cov = len(reqs) - len(unmet([fa["Front"]], reqs))
         z_up = 0 if abs(G.up_vector(d, x).z) > 0.99 else 1
-        for sub in ([fixed] if fixed else [s for s in SUBSETS if REQUIRED_AUTO_VIEWS.issubset(s)]):
+        for sub in ([fixed] if fixed else SUBSETS):
             miss = unmet([fa[n] for n in sub if n in fa], reqs)
             t_axis = None
             if (sub == ["Front"] and miss and len(miss) == 1 and miss[0]["kind"] == "loc"
@@ -303,6 +303,42 @@ def _regions(frame, keepouts):
         [fr[0], all_top, fr[2], fr[3]],  # full-width band above everything
     ]
     return [r for r in regions if r[2] > r[0] and r[3] > r[1]]
+
+
+def _largest_primary_scale(views, names, specs, projection, scales, frame, keepouts):
+    boxes = {name: G.view_local_bbox(views[name]) for name in names}
+    radial = {}
+    for spec in specs:
+        if spec["type"] in ("Diameter", "Radius"):
+            radial.setdefault(spec["view"].name, set()).update({"top", "right"})
+    for scale in scales:
+        for plan in (specs, balanced_stacks(specs)):
+            _, bounds = arrange(boxes, names, dimensions.stack_depths(plan), radial, projection, scale)
+            if any(_fit(bounds, region) is not None for region in _regions(frame, keepouts)):
+                return scale
+    return 0
+
+
+def _reorient_group(group, names, x_direction):
+    """Rebuild projection geometry before any dimensions or dependent views exist."""
+    doc = group.Document
+    for view in list(group.Views):
+        if str(view.Type) != "Front":
+            group.removeProjection(str(view.Type))
+    group.Anchor.XDirection = x_direction
+    doc.recompute()
+    for name in names:
+        if name != "Front":
+            group.addProjection(name)
+    doc.recompute()
+    views = {str(view.Type): view for view in group.Views}
+    for view in views.values():
+        view.HardHidden = True
+        view.SmoothVisible = False
+        view.SeamVisible = False
+        _style_view(view)
+    doc.recompute()
+    return views
 
 
 # ------------------------------------------------------------- centre lines
@@ -501,9 +537,9 @@ def _style_dim(dim):
     vo = getattr(dim, "ViewObject", None)
     if vo is None:
         return
-    # SolidWorks-like ISO look: thin 0.18 lines, slim filled 3 mm arrows,
+    # Paper-space sizes remain readable when the model scale changes.
     # 3.5 mm text above the line; set per object, user preferences untouched.
-    for prop, val in (("LineWidth", 0.18), ("Fontsize", DIM_FONT_SIZE), ("Arrowsize", 3.0),
+    for prop, val in (("LineWidth", LINE_THIN), ("Fontsize", DIM_FONT_SIZE), ("Arrowsize", 3.0),
                       ("Font", "osifont"), ("Color", (0.0, 0.0, 0.0)), ("StandardAndStyle", "ISO Oriented")):
         try:
             setattr(vo, prop, val)
@@ -579,8 +615,9 @@ def add_balloons(doc, page, view, shape, comps, center3d):
 # --------------------------------------------------------------- top level
 def create_drawing(doc, source=None, template="A3", orientation="landscape", projection="first",
                    scale="auto", views="auto", iso=True, title=None, title_block=None, notes=None,
-                   auto_dimension=True, centerlines=True, page_name="Page", allow_enlarge=False,
-                   iso_style="shaded", iso_color=None, purpose="manufacturing", sections=True, details=True):
+                   auto_dimension=True, centerlines=True, page_name="Page", allow_enlarge=True,
+                   iso_style="shaded", iso_color=None, purpose="manufacturing", sections=True, details=True,
+                   dimensioned_only=True, section_cut_only=False):
     projection = "third" if str(projection).lower().startswith("third") else "first"
     progress.reset()
     progress.stage("import", source=str(source))
@@ -695,7 +732,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
                 vobjs.pop(extra, None)
                 doc.recompute()
         used = {sp["view"].name for sp in specs}
-        redundant = [n for n in names if n not in REQUIRED_AUTO_VIEWS and n not in used]
+        redundant = [n for n in names if n != "Front" and n not in used]
         if redundant:
             for n in redundant:
                 grp.removeProjection(n)
@@ -730,6 +767,33 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     if pl_lines:
         pw, ph = note_size(pl_lines, PARTS_LIST_SIZE)
         pl_box = [tb[0], tb[3] + SHEET_MARGIN / 2, tb[0] + pw, tb[3] + SHEET_MARGIN / 2 + ph]
+
+    if auto_dimension and dimensioned_only and views == "auto" and not turned_axis and scale == "auto":
+        trial_scales = (list(reversed(ENLARGEMENT_SCALES)) if allow_enlarge else []) + REDUCTION_SCALES
+        keep = [G.expand(box, 2.0) for box in (tb, notes_box, pl_box) if box]
+        original_names, original_specs = list(names), specs
+        original_bad = sum(bool(spec.get("hidden")) for spec in specs)
+        original_scale = _largest_primary_scale(vobjs, names, specs, projection, trial_scales, frame, keep)
+        rotated_x = G.up_vector(front_dir, front_x)
+        rotate_names = {"Front": "Front", "Top": "Right", "Bottom": "Left", "Right": "Bottom", "Left": "Top"}
+        names = [rotate_names.get(name, name) for name in names]
+        vobjs = _reorient_group(grp, names, rotated_x)
+        geoms, specs, unplaced = _plan()
+        rotated_scale = _largest_primary_scale(vobjs, names, specs, projection, trial_scales, frame, keep)
+        if (rotated_scale > original_scale and preserves_coverage(original_specs, specs)
+                and sum(bool(spec.get("hidden")) for spec in specs) <= original_bad):
+            front_x = rotated_x
+            warnings.append("rotated the standard view group 90 degrees to fit a larger shared scale")
+        else:
+            names = original_names
+            vobjs = _reorient_group(grp, names, front_x)
+            geoms, specs, unplaced = _plan()
+        boxes = {n: G.view_local_bbox(vobjs[n]) for n in names}
+        depths = dimensions.stack_depths(specs)
+        radial = {}
+        for spec in specs:
+            if spec["type"] in ("Diameter", "Radius"):
+                radial.setdefault(spec["view"].name, set()).update({"top", "right"})
 
     iso_view, iso_local = None, None
     if iso:
@@ -773,19 +837,27 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         return [x1 - w, y0, x1, y0 + h], iso_s
 
     chosen = None
+    layouts = [specs, balanced_stacks(specs)]
+    layout_attempts = []
     for s in cands:
         iso_box, iso_s = iso_fit(s)
-        pos, lay = arrange(boxes, names, depths, radial, projection, s)
         keep = [G.expand(tb, 2.0), G.expand(iso_box, 3.0) if iso_box else None, G.expand(notes_box, 2.0) if notes_box else None,
                 G.expand(pl_box, 2.0) if pl_box else None]
         fits = []
-        for region in _regions(frame, keep):
-            off = _fit(lay, region)
-            if off is not None:
-                slack = min(region[2] - region[0] - (lay[2] - lay[0]), region[3] - region[1] - (lay[3] - lay[1]))
-                fits.append((slack, off))
+        for layout_index, candidate_specs in enumerate(layouts):
+            pos, lay = arrange(boxes, names, dimensions.stack_depths(candidate_specs), radial, projection, s)
+            layout_attempts.append({"scale": s, "balanced": bool(layout_index),
+                                    "width": round(lay[2] - lay[0], 2), "height": round(lay[3] - lay[1], 2),
+                                    "fits": False})
+            for region in _regions(frame, keep):
+                off = _fit(lay, region)
+                if off is not None:
+                    layout_attempts[-1]["fits"] = True
+                    slack = min(region[2] - region[0] - (lay[2] - lay[0]), region[3] - region[1] - (lay[3] - lay[1]))
+                    fits.append((slack, off, pos, candidate_specs))
         if fits:
-            chosen = (s, pos, max(fits, key=lambda f: f[0])[1], iso_box, iso_s)
+            _, off, pos, specs = max(fits, key=lambda f: f[0])
+            chosen = (s, pos, off, iso_box, iso_s)
         if chosen:
             break
     if chosen is None:
@@ -862,10 +934,16 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     from . import sections as section_views
 
     progress.stage("sections_details")
+    # Supplementary views must solve a specific readability/visibility problem.
+    # A counterbore already defined by a visible callout does not need another cut.
+    minimal_extras = bool(dimensioned_only)
+    need_section = any(spec.get("hidden") for spec in specs) or bool(unplaced)
     extra = section_views.add_sections_and_details(
         doc, page, shape, geoms, specs, reqs, info, s,
         keepouts=[box for box in (iso_box, notes_box, pl_box) if box],
-        projection=projection, sections=sections, details=details)
+        projection=projection, sections=sections and (need_section or not minimal_extras),
+        details=details, max_sections=1 if minimal_extras else 2, max_details=1 if minimal_extras else 3,
+        cut_only=section_cut_only, small_details_only=minimal_extras)
     warnings.extend(extra["notes"])
     if extra["unplaced"]:
         warnings.append("supplementary views need a larger sheet: " + "; ".join(extra["unplaced"]))
@@ -877,7 +955,9 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         revised, remaining = planner.realize(reqs, geoms + extra_geoms, occupied_sides(names, projection))
         # Replace the whole plan only when coverage does not regress. References
         # are resolved again on the cut/cropped geometry, never copied by index.
-        if len(remaining) <= len(unplaced):
+        if preserves_coverage(specs, revised):
+            revised = retain_parent_dimensions(specs, revised)
+            revised = balanced_stacks(revised)
             for dim in created:
                 doc.removeObject(dim.Name)
             doc.recompute()
@@ -887,20 +967,57 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
                 if str(getattr(dim, "FDRole", "")).startswith("diameter:thread"):
                     dim.Arbitrary = True
             unplaced = remaining
+            specs = revised
+        else:
+            warnings.append("supplementary dimension plan rejected: it would lose an already placed requirement")
     doc.recompute()  # measured values must be current before duplicate detection
+    final_layout = None
+    if auto_dimension and dimensioned_only and (scale == "auto" or scale is None) and specs:
+        from .reflow import maximize_scale
+        created, s, final_layout = maximize_scale(
+            page, grp, names, vobjs, specs, created, s, cands, arrange, projection,
+            [box for box in (iso_box, pl_box) if box])
+        from .snapshot import _annotation_record
+        for note in note_objs:
+            if note.Name.startswith("Notes"):
+                notes_box = _annotation_record(note)["bbox"]
+        for dim in created:
+            _style_dim(dim)
+            if str(getattr(dim, "FDRole", "")).startswith("diameter:thread"):
+                dim.Arbitrary = True
+        page_mod.set_title_block(page, {"scale": page_mod.scale_text(s)})
+        if not final_layout["applied"]:
+            warnings.append("complete view and dimension footprints do not fit; review layout or use a larger sheet")
     removed = dimensions.dedupe(page, doc)
     doc.recompute()
+    visibility_policy = retain_dimensioned_views(page, [iso_view] if iso_view is not None else []) if dimensioned_only else None
+    from .annotation_layout import clear_collisions
+    dimension_views = {spec["view"].view.Name: spec["view"].view for spec in specs}
+    clearance = clear_collisions(page, [dim for dim in page.Views if dim.TypeId == "TechDraw::DrawViewDimension"],
+                                 [v for v in dimension_views.values() if bool(v.Visibility)],
+                                 bounds=frame, keepouts=[b for b in (tb, iso_box, notes_box, pl_box) if b]) if auto_dimension else None
+    if clearance and clearance["unresolved"]:
+        warnings.append("annotation collisions remain: " + ", ".join(clearance["unresolved"]))
+    visible_names = [name for name in names if bool(vobjs[name].Visibility)]
+    visible_iso = iso_view if iso_view is not None and bool(iso_view.Visibility) else None
+    visible_extra = dict(extra)
+    for kind in ("sections", "details"):
+        visible_extra[kind] = [name for name in extra[kind] if bool(doc.getObject(name).Visibility)]
     set_meta(page, generator=GENERATOR, dedupe_ran=True, purpose=purpose, source=obj.Name, part_kind=info["kind"],
-             projection=projection, views=names, iso=iso_view.Name if iso_view else None,
+             projection=projection, views=visible_names, iso=visible_iso.Name if visible_iso else None,
              notes=[n.Name for n in note_objs], assembly=bool(info.get("assembly")),
              thickness=thickness, unplaced=unplaced,
              sheet=({"t": sheet_info["t"], "inside_radii": sheet_info["inner_radii"],
                      "bends": len(sheet_info["bends"])} if sheet_info else None),
              components=[{k: c[k] for k in ("item", "qty", "name")} for c in src_info["components"]],
-             iso_shaded=bool(iso_view is not None and iso_view.TypeId == "TechDraw::DrawViewImage"),
+             iso_shaded=bool(visible_iso is not None and visible_iso.TypeId == "TechDraw::DrawViewImage"),
              threads=[threads_mod.summary(t) for t in thr], tapdrill_review=tap_review,
              drawing_geometry=draw_obj.Name if draw_obj is not obj else None,
-             supplementary_views=extra, standards_profile="SN EN ISO / Swiss TPD-GPS",
+             supplementary_views=visible_extra, standards_profile="SN EN ISO / Swiss TPD-GPS",
+             dimensioned_only=bool(dimensioned_only), view_visibility_policy=visibility_policy,
+             layout_attempts=layout_attempts,
+             final_layout=final_layout,
+             annotation_clearance=clearance,
              coverage_gaps=coverage_gaps,
              standards_review_required=True)
     doc.recompute()
@@ -913,20 +1030,63 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         "template": os.path.basename(tpl_path),
         "projection": projection,
         "scale": page_mod.scale_text(s),
-        "views": {n: vobjs[n].Name for n in names},
-        "isometric": iso_view.Name if iso_view else None,
-        "iso_scale": page_mod.scale_text(iso_s) if iso_view else None,
+        "views": {n: vobjs[n].Name for n in visible_names},
+        "isometric": visible_iso.Name if visible_iso else None,
+        "iso_scale": page_mod.scale_text(iso_s) if visible_iso else None,
         "dimensions": len(created) - len(removed),
         "centerlines": n_center,
         "threads": [threads_mod.callout(t) for t in thr],
         "thread_lines": n_thread_lines,
-        "sections": extra["sections"],
-        "details": extra["details"],
+        "sections": visible_extra["sections"],
+        "details": visible_extra["details"],
+        "dimensioned_only": bool(dimensioned_only),
+        "view_visibility_policy": visibility_policy,
         "duplicates_removed": removed,
         "unplaced": unplaced,
         "timings": timings,
         "warnings": warnings,
     }
+
+
+def retain_dimensioned_views(page, recognition_views=()):
+    """Hide views without attached dimensions while retaining dependency objects.
+
+    Projection anchors and section/detail parents must remain in the document:
+    deleting them can invalidate the dimensions on their dependent views.
+    Native Visibility survives saving and also controls the TechDraw GUI sheet.
+    The designated isometric recognition view is retained without dimensions.
+    """
+    children = []
+    for obj in page.Views:
+        children.append(obj)
+        if obj.TypeId == "TechDraw::DrawProjGroup":
+            children.extend(obj.Views)
+    attached = {}
+    for obj in children:
+        if obj.TypeId != "TechDraw::DrawViewDimension" or not bool(obj.Visibility):
+            continue
+        for reference in obj.References2D:
+            view = reference[0]
+            if view is not None:
+                attached.setdefault(view.Name, set()).add(obj.Name)
+    hidden, retained = [], []
+    recognition = {view.Name for view in recognition_views}
+    for view in children:
+        if view.TypeId == "TechDraw::DrawProjGroup":
+            continue
+        if not G.is_type(view, "TechDraw::DrawViewPart", "TechDraw::DrawViewImage"):
+            continue
+        dimension_names = sorted(attached.get(view.Name, []))
+        view.Visibility = bool(dimension_names) or view.Name in recognition
+        if dimension_names or view.Name in recognition:
+            retained.append({"name": view.Name, "dimensions": dimension_names,
+                             "recognition": view.Name in recognition})
+        else:
+            dependents = [obj.Name for obj in children
+                          if getattr(getattr(obj, "BaseView", None), "Name", None) == view.Name]
+            hidden.append({"name": view.Name, "type_id": view.TypeId, "reason": "no attached dimension",
+                           "retained_in_document": True, "dependent_views": dependents})
+    return {"enabled": True, "hidden": hidden, "retained": retained, "removed": []}
 
 
 def _parse_scale(scale):

@@ -27,6 +27,11 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=240)
+    parser.add_argument("--three-views", action="store_true",
+                        help="require Front/Top/Right instead of automatic view selection")
+    parser.add_argument("--dimensioned-only", action=argparse.BooleanOptionalAction, default=True,
+                        help="require dimensions on defining views (default); the coloured isometric is always retained")
+    parser.add_argument("--cut-only", action="store_true", help="sections project only material at the cut plane")
     args = parser.parse_args()
     if args.jobs < 1 or not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("jobs and timeout must be positive")
@@ -61,8 +66,9 @@ def main():
     manifest = {
         "engine": str(args.engine), "code_before": engine_hashes(args.engine),
         "protocol": "one-shot local FreeCADCmd; no network, MCP, RPC, AI or corrections",
-        "options": {"views": "auto (minimum Front, Top, Right)", "template": "A3",
-                    "projection": "first", "scale": "auto", "sections": True, "details": True},
+        "options": {"views": ["Front", "Top", "Right"] if args.three_views else "auto", "template": "A3",
+                    "projection": "first", "scale": "auto", "sections": True, "details": True,
+                    "dimensioned_only": args.dimensioned_only, "section_cut_only": args.cut_only},
         "timeout_seconds": args.timeout, "jobs": args.jobs,
         "inputs": [{"source": str(p), "sha256": sha256(p)} for p in sources],
     }
@@ -102,8 +108,11 @@ def run_case(source, args, backends, rules):
         result["source_sha256"] = sha256(source)
         created, initial = backend.run([
             {"op": "create_drawing", "args": {"source": str(source), "output": str(drawing),
-              "views": "auto", "template": "A3", "projection": "first", "scale": "auto",
-              "sections": True, "details": True, "title_block": {"date_of_issue": "2026-10-18"}}},
+              "views": ["Front", "Top", "Right"] if args.three_views else "auto",
+              "template": "A3", "projection": "first", "scale": "auto",
+              "sections": True, "details": True,
+              "dimensioned_only": args.dimensioned_only, "section_cut_only": args.cut_only,
+              "title_block": {"date_of_issue": "2026-10-18"}}},
             {"op": "snapshot", "args": {"doc": str(drawing), "include_geometry": True}},
         ])
         result["generation_seconds"] = round(time.monotonic() - started, 1)
@@ -126,6 +135,8 @@ def run_case(source, args, backends, rules):
         result.update(status="ok", created=created, inspection=report.summary(),
                       principal_views=principal_names,
                       three_views={"Front", "Top", "Right"}.issubset(principal_names),
+                      view_policy_satisfied=({"Front", "Top", "Right"}.issubset(principal_names)
+                                             if args.three_views else "Front" in principal_names),
                       saved_file_unchanged=before == sha256(drawing),
                       persistence_same=semantic_snapshot(initial) == semantic_snapshot(reopened),
                       semantic_sha256=hashlib.sha256(json.dumps(semantic_snapshot(reopened), sort_keys=True).encode()).hexdigest(),
@@ -134,7 +145,7 @@ def run_case(source, args, backends, rules):
         result["pdf_valid_header"] = pdf_path.is_file() and pdf_path.read_bytes().startswith(b"%PDF-")
         result["png_valid_header"] = png_path.is_file() and png_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
         result["validation_failures"] = [key for key in
-            ("three_views", "saved_file_unchanged", "persistence_same", "pdf_valid_header", "png_valid_header")
+            ("view_policy_satisfied", "saved_file_unchanged", "persistence_same", "pdf_valid_header", "png_valid_header")
             if not result[key]]
         if result["validation_failures"]:
             result["status"] = "validation_failed"

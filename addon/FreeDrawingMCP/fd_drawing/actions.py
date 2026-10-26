@@ -108,8 +108,11 @@ def set_note(doc, page, name, text=None, x=None, y=None, append=None):
     return f"updated note {n.Name}"
 
 
-def set_view(doc, page, name, hard_hidden=None, scale=None, caption=None, direction=None, x_direction=None):
+def set_view(doc, page, name, hard_hidden=None, scale=None, caption=None, direction=None, x_direction=None,
+             cut_only=None):
     v = _obj(doc, name)
+    if cut_only is not None:
+        v = sections.set_cut_only(doc, page, v, bool(cut_only))
     if hard_hidden is not None:
         v.HardHidden = bool(hard_hidden)
     if scale is not None:
@@ -190,7 +193,8 @@ def _place(doc, page, view, near_view, side=None):
     return pos
 
 
-def add_section(doc, page, base, axis=None, origin=None, letter=None, half=False, x=None, y=None, scale=None):
+def add_section(doc, page, base, axis=None, origin=None, letter=None, half=False, x=None, y=None, scale=None,
+                cut_only=False):
     """Section view cut on ``base`` [03].
 
     ``axis``: model axis normal to the cutting plane ('X'|'Y'|'Z'), or omitted to
@@ -250,7 +254,7 @@ def add_section(doc, page, base, axis=None, origin=None, letter=None, half=False
             up = D.cross(X)
             up.normalize()
             plan.update(half=True, half_up=[up.x, up.y, up.z], axis_point=[o.x, o.y, o.z])
-    sec = sections.add_section(doc, page, v, plan, s, x, y)
+    sec = sections.add_section(doc, page, v, plan, s, x, y, cut_only=cut_only)
     if x is None or y is None:
         _place(doc, page, sec, v, plan.get("side"))
     return f"added section {sec.Name} ({plan['caption']}) on {v.Name}"

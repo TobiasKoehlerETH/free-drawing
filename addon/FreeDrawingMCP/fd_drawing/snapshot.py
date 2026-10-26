@@ -15,6 +15,7 @@ import FreeCAD as App
 from . import geometry as G
 from . import templates
 from .standards import DIM_FONT_SIZE, LINE_THICK, LINE_THIN
+from .annotation_ink import caption_geometry, dimension_ink
 from .textfmt import display_text
 
 SCHEMA_VERSION = 1
@@ -101,6 +102,8 @@ def _source_center(view):
 
 
 def _view_kind(view):
+    if bool(getattr(view, "FDCutOnly", False)):
+        return "section"
     for t, k in _KIND_BY_TYPE.items():
         if view.TypeId == t:
             return k
@@ -426,6 +429,9 @@ def dimension_signature(dim):
             return ("linear", t, value, view.Name, tuple(subs))
         vals = sorted(round(_model_coord(view, axis, sign, p, local_axis, center), 2) for p in pts[:2])
         return ("linear", axis, value, tuple(vals))
+    if t == "Angle" and len(pts) >= 3:
+        endpoints = tuple(sorted(tuple(round(c, 4) for c in _model_point(view, p, center)) for p in pts))
+        return ("angle", value, view.Name, endpoints)
     return (t, value, view.Name, tuple(sorted(subs)))
 
 
@@ -503,11 +509,18 @@ def _dimension_record(dim):
             end = (cx - back * math.cos(ang), cy - back * math.sin(ang))
             lines.append([start[0], start[1], end[0], end[1]])
             rec["arc"] = {"center": [r2(center[0]), r2(center[1])], "radius": r2(r)}
+            if t == "Radius" and subs and subs[0].startswith("Edge"):
+                edge = view.getEdgeByIndex(int(subs[0][4:]))
+                rec["arc"]["points"] = [list(G.local_to_page(view, point, origin))
+                                         for point in G.discretize(edge, 0.5, 128)]
     except Exception:
         pass
     rec["lines"] = [[r2(v) for v in seg] for seg in lines]
     rec["text_box"] = _text_box(cx, cy, text, vertical=vertical)
     rec["text_center"] = [r2(cx), r2(cy)]
+    rec["ink_lines"] = dimension_ink(rec)
+    if t in ("Radius", "Diameter"):
+        rec["lines"] = rec["ink_lines"]
     rec["ref_hidden"] = _refs_hidden(view, subs)
     if t in ("DistanceX", "DistanceY"):
         axis, _ = _model_axis_of(view, "x" if t == "DistanceX" else "y")
@@ -585,6 +598,8 @@ def snapshot(doc, page, include_geometry=True):
 
     views, dims, annos = [], [], []
     for obj in page_views(page):
+        if hasattr(obj, "Visibility") and not bool(obj.Visibility):
+            continue
         t = obj.TypeId
         if t == "TechDraw::DrawViewDimension":
             dims.append(_dimension_record(obj))
@@ -597,6 +612,15 @@ def snapshot(doc, page, include_geometry=True):
             continue
         else:
             views.append(_view_record(obj, include_geometry))
+    visible_view_names = {view["name"] for view in views}
+    for view in views:
+        caption = caption_geometry(view, dims)
+        if caption:
+            view["caption_position"], view["caption_box"] = caption
+        if view.get("base_view") and view["base_view"] not in visible_view_names:
+            view["base_view_hidden"] = True
+            view.pop("cutting_line", None)
+            view.pop("detail_circle", None)
     meta = get_meta(page)
     solids = 0
     src_names = set()

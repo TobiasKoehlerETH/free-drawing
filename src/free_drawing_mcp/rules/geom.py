@@ -80,6 +80,17 @@ def seg_seg(a: Sequence[float], b: Sequence[float], eps: float = 1e-6) -> bool:
     return (d1 * d2 < -eps) and (d3 * d4 < -eps)
 
 
+def collinear_overlap(a: Sequence[float], b: Sequence[float], tolerance: float = 0.2) -> bool:
+    dx, dy = a[2] - a[0], a[3] - a[1]
+    length = math.hypot(dx, dy)
+    if length < tolerance:
+        return False
+    if any(abs((x - a[0]) * dy - (y - a[1]) * dx) / length > tolerance for x, y in (b[:2], b[2:])):
+        return False
+    lo, hi = sorted(((x - a[0]) * dx / length + (y - a[1]) * dy / length for x, y in (b[:2], b[2:])))
+    return min(length, hi) - max(0, lo) > tolerance
+
+
 def polyline_segments(flat: Sequence[float]):
     for i in range(0, len(flat) - 3, 2):
         yield (flat[i], flat[i + 1], flat[i + 2], flat[i + 3])

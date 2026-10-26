@@ -1,0 +1,175 @@
+{
+  "date": "2026-10-26",
+  "dataset_revision": "01a38048c5eaf09b777d7929df8e3c8a03e36965",
+  "engine_digest": "b0a15a1a4fb5cbfaf3979ab27ede4b2ab72a483c64bfa77828f855a7f2ed0db4",
+  "engine_unchanged": true,
+  "source_models": 6,
+  "layout_rules_checked": [
+    "A.8",
+    "C.2",
+    "C.3",
+    "E.10",
+    "E.11"
+  ],
+  "dimension_counts_preserved": true,
+  "all_nominal_values_preserved": false,
+  "before_views": 38,
+  "after_views": 20,
+  "dimensions": 130,
+  "standard_view_dimensions": 126,
+  "cases": [
+    {
+      "part": "part_0001",
+      "before_views": 7,
+      "after_views": 4,
+      "before_scale": "1 : 5",
+      "after_scale": "1 : 1",
+      "before_dimensions": 26,
+      "after_dimensions": 26,
+      "standard_view_dimensions": 25,
+      "sections": 1,
+      "details": 0,
+      "nominal_values_preserved": true,
+      "layout_findings": [],
+      "changed_nominal_values": {
+        "before": {},
+        "after": {}
+      },
+      "unplaced_requirements": [],
+      "hidden_dimensions": 0,
+      "persisted_dimensions": true,
+      "pdf": "C:\\Code\\free-drawing\\samples\\validation\\reference-final-2026-10-26\\part_0001.pdf"
+    },
+    {
+      "part": "part_0013",
+      "before_views": 5,
+      "after_views": 2,
+      "before_scale": "1 : 1",
+      "after_scale": "2 : 1",
+      "before_dimensions": 14,
+      "after_dimensions": 14,
+      "standard_view_dimensions": 14,
+      "sections": 0,
+      "details": 0,
+      "nominal_values_preserved": true,
+      "layout_findings": [],
+      "changed_nominal_values": {
+        "before": {},
+        "after": {}
+      },
+      "unplaced_requirements": [],
+      "hidden_dimensions": 0,
+      "persisted_dimensions": true,
+      "pdf": "C:\\Code\\free-drawing\\samples\\validation\\reference-final-2026-10-26\\part_0013.pdf"
+    },
+    {
+      "part": "part_0026",
+      "before_views": 7,
+      "after_views": 3,
+      "before_scale": "1 : 1",
+      "after_scale": "1 : 2",
+      "before_dimensions": 36,
+      "after_dimensions": 36,
+      "standard_view_dimensions": 36,
+      "sections": 0,
+      "details": 0,
+      "nominal_values_preserved": true,
+      "layout_findings": [],
+      "changed_nominal_values": {
+        "before": {},
+        "after": {}
+      },
+      "unplaced_requirements": [],
+      "hidden_dimensions": 0,
+      "persisted_dimensions": true,
+      "pdf": "C:\\Code\\free-drawing\\samples\\validation\\reference-final-2026-10-26\\part_0026.pdf"
+    },
+    {
+      "part": "part_0039",
+      "before_views": 6,
+      "after_views": 3,
+      "before_scale": "1 : 1",
+      "after_scale": "1 : 1",
+      "before_dimensions": 7,
+      "after_dimensions": 7,
+      "standard_view_dimensions": 5,
+      "sections": 1,
+      "details": 0,
+      "nominal_values_preserved": true,
+      "layout_findings": [],
+      "changed_nominal_values": {
+        "before": {},
+        "after": {}
+      },
+      "unplaced_requirements": [],
+      "hidden_dimensions": 0,
+      "persisted_dimensions": true,
+      "pdf": "C:\\Code\\free-drawing\\samples\\validation\\reference-final-2026-10-26\\part_0039.pdf"
+    },
+    {
+      "part": "part_0052",
+      "before_views": 6,
+      "after_views": 5,
+      "before_scale": "1 : 1",
+      "after_scale": "1 : 2",
+      "before_dimensions": 24,
+      "after_dimensions": 24,
+      "standard_view_dimensions": 23,
+      "sections": 1,
+      "details": 0,
+      "nominal_values_preserved": true,
+      "layout_findings": [],
+      "changed_nominal_values": {
+        "before": {},
+        "after": {}
+      },
+      "unplaced_requirements": [
+        "position X=0.0 (boss-center) from datum X=-40.0",
+        "position Y=0.0 (boss-center) from datum Y=-40.0"
+      ],
+      "hidden_dimensions": 3,
+      "persisted_dimensions": true,
+      "pdf": "C:\\Code\\free-drawing\\samples\\validation\\reference-final-2026-10-26\\part_0052.pdf"
+    },
+    {
+      "part": "part_0065",
+      "before_views": 7,
+      "after_views": 3,
+      "before_scale": "1 : 1",
+      "after_scale": "1 : 1",
+      "before_dimensions": 23,
+      "after_dimensions": 23,
+      "standard_view_dimensions": 23,
+      "sections": 0,
+      "details": 0,
+      "nominal_values_preserved": false,
+      "layout_findings": [],
+      "changed_nominal_values": {
+        "before": {
+          "45.0": 1
+        },
+        "after": {
+          "135.0": 1
+        }
+      },
+      "unplaced_requirements": [
+        "chamfer C0.54",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face",
+        "angle of inclined face"
+      ],
+      "hidden_dimensions": 0,
+      "persisted_dimensions": true,
+      "pdf": "C:\\Code\\free-drawing\\samples\\validation\\reference-final-2026-10-26\\part_0065.pdf"
+    }
+  ]
+}

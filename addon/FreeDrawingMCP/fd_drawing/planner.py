@@ -53,11 +53,21 @@ class Realizer:
         self.unplaced = []
         self.angle_normals = []
         self.dia_views = {}  # hole group -> view name (affinity for centre positions)
+        self.requirement = {}
 
     # ------------------------------------------------------------ helpers
     def _score(self, vg, visible, affinity=0):
         detail = getattr(vg.view, "TypeId", "") == "TechDraw::DrawViewDetail"
-        return (10 if visible else 0) + (4 if detail else VIEW_PRIORITY.get(vg.name, 0)) + affinity
+        priority = VIEW_PRIORITY.get(vg.name, 0)
+        if detail:
+            requirement = self.requirement
+            size = requirement.get("dia", requirement.get("leg", 2 * requirement.get("radius", float("inf"))))
+            if requirement.get("kind") == "loc":
+                size = abs(requirement["coord"] - requirement["datum"])
+            # Keep overall sizes and readable locations on standard views.
+            # Only genuinely small features earn a preference for enlargement.
+            priority = 4 if size * G.view_scale(vg.view.BaseView) < 3.0 else -3
+        return (10 if visible else 0) + priority + affinity
 
     def _circle_in(self, vg, center3d, radius):
         lc = _project(vg, center3d)
@@ -363,7 +373,9 @@ def realize(reqs, view_geoms, occupied):
     """Return ``(specs, unplaced)`` for :func:`dimensions.place`."""
     rz = Realizer(view_geoms, occupied)
     order = {"dia": 0, "pcd": 1, "radius": 2, "sphere": 2, "chamfer": 3, "angle": 4, "loc": 5}
-    for r in sorted(reqs, key=lambda r: order.get(r["kind"], 9)):
+    for requirement_id, r in sorted(enumerate(reqs), key=lambda item: order.get(item[1]["kind"], 9)):
+        before = len(rz.specs)
+        rz.requirement = r
         k = r["kind"]
         if k == "dia":
             rz.diameter(r)
@@ -385,6 +397,10 @@ def realize(reqs, view_geoms, occupied):
             rz.angle(r)
         elif k == "pcd":
             rz.pcd(r)
+        # Identity is tied to this build's requirement list, not to dimension
+        # value or a view-local EdgeN. Replanning uses the same list.
+        for spec in rz.specs[before:]:
+            spec["requirement_id"] = requirement_id
     return rz.specs, rz.unplaced
 
 

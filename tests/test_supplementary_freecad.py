@@ -21,7 +21,7 @@ def test_supplementary_views_survive_reopen(tmp_path, name, folder, kind, projec
     backend = HeadlessBackend(timeout=300)
     created = backend.run([{"op": "create_drawing", "args": {
         "source": str(ROOT / "samples" / folder / f"{name}.step"),
-        "output": str(output), "projection": projection,
+        "output": str(output), "projection": projection, "dimensioned_only": False, "allow_enlarge": False,
     }}])[0]
     snapshot = backend.run([{"op": "snapshot", "args": {"doc": str(output), "include_geometry": True}}])[0]
     selected = [v for v in snapshot["views"] if v["kind"] == kind]

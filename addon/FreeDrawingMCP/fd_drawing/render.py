@@ -21,7 +21,8 @@ import xml.etree.ElementTree as ET
 
 import FreeCAD as App
 
-from .standards import DIM_FONT_SIZE
+from .standards import DIM_FONT_SIZE, LINE_THIN
+from .annotation_ink import dimension_ink
 
 _SVG_NS = "http://www.w3.org/2000/svg"
 _FC_NS = "https://www.freecad.org/wiki/index.php?title=Svg_Namespace"
@@ -123,7 +124,8 @@ def schematic_svg(snap, highlights=None, template_path=None):
                 bc, br = v["boundary"]["center"], v["boundary"]["radius"]
                 bb = [min(bb[0], bc[0] - br), min(bb[1], bc[1] - br), max(bb[2], bc[0] + br), bb[3]]
             if bb and label:
-                out.append(f'<text x="{(bb[0] + bb[2]) / 2:.2f}" y="{H - bb[1] + 8:.2f}" font-size="{LABEL_SIZE}" '
+                lx, ly = v.get("caption_position", [(bb[0] + bb[2]) / 2, bb[1] - 8])
+                out.append(f'<text x="{lx:.2f}" y="{H - ly:.2f}" font-size="{LABEL_SIZE}" '
                            f'text-anchor="middle" fill="#000" stroke="none" font-family="osifont">{_esc(label)}</text>')
     out.append("</g>")
     out.append(f'<g id="dimensions" fill="none" stroke="{DIM_COLOR}" stroke-width="{DIM_LINE}" stroke-linecap="butt">')
@@ -149,7 +151,7 @@ def schematic_svg(snap, highlights=None, template_path=None):
 # SolidWorks-like dimension style (ISO): thin lines, slim filled arrows,
 # extension-line gap and overshoot, text centred above the dimension line.
 DIM_COLOR = "#000000"
-DIM_LINE = 0.18
+DIM_LINE = LINE_THIN
 ARROW_L = 3.0
 ARROW_W = 1.0
 EXT_GAP = 1.0
@@ -227,10 +229,14 @@ def _dimension_svg(d, H):
         s1 = (tb[2] + 0.5, shoulder_y) if right else (tb[0] - 0.5, shoulder_y)
         ang = math.atan2(s0[1] - c[1], s0[0] - c[0])
         tip = (c[0] + r * math.cos(ang), c[1] + r * math.sin(ang))
-        outside = math.hypot(s0[0] - c[0], s0[1] - c[1]) > r
+        strokes = dimension_ink(d)
+        if strokes:
+            tip = strokes[0][:2]
+            s0, s1 = strokes[0][2:], strokes[1][2:]
+            ang = math.atan2(s0[1] - tip[1], s0[0] - tip[0])
         parts.append(_line(tip, s0, H))
         parts.append(_line(s0, s1, H))
-        inward = (-math.cos(ang), -math.sin(ang)) if outside else (math.cos(ang), math.sin(ang))
+        inward = (-math.cos(ang), -math.sin(ang))
         parts.append(_arrow(tip, inward, H))
         parts.append(_text(((tb[0] + tb[2]) / 2, tc[1]), text, H))
     else:

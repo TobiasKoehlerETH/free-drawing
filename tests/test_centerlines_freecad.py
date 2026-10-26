@@ -16,7 +16,7 @@ def test_saved_flange_axes_and_pitch_circle_are_dash_dot(tmp_path):
     output, svg, png = (tmp_path / name for name in ("flange.FCStd", "flange.svg", "flange.png"))
     backend.run([{"op": "create_drawing", "args": {
         "source": str(ROOT / "samples" / "parts" / "flange.step"),
-        "output": str(output), "views": ["Front", "Top", "Right"],
+        "output": str(output), "views": ["Front", "Top", "Right"], "dimensioned_only": False,
     }}])
     # A separate backend call opens the persisted FCStd in a fresh process.
     snap, _, _ = backend.run([

@@ -2,7 +2,23 @@
 
 **Create FreeCAD drawings from STEP geometry and inspect them against a Swiss SN EN ISO drafting checklist.**
 
-free-drawing-mcp is a [Model Context Protocol](https://modelcontextprotocol.io) server plus a FreeCAD addon. It imports STEP, IGES, BREP or FCStd, selects views for recognised features, adds dimensions, sections and enlarged details, and creates an isometric recognition view. It then inspects the sheet and reports automatic fixes or engineering review needs. Use it through an MCP client, the command line or headless FreeCAD. Generated drawings remain drafts until their geometry, manufacturing requirements and applicable standards have been reviewed.
+free-drawing-mcp is a [Model Context Protocol](https://modelcontextprotocol.io) server plus a FreeCAD addon. It imports STEP, IGES, BREP or FCStd, selects and dimensions large standard views, and adds sections or details where needed. Defining views carry dimensions; a coloured isometric recognition view stays at the bottom right. It then inspects the sheet and reports automatic fixes or engineering review needs. Use it through an MCP client, the command line or headless FreeCAD. Generated drawings remain drafts until their geometry, manufacturing requirements and applicable standards have been reviewed.
+
+## Desktop app
+
+On Windows, double-click **Start Free Drawing.cmd**. Drop one `.step` or `.stp` file into the light, monochrome window, or select **SELECT FILE**. Drawing creation starts automatically, and the resulting TechDraw sheet opens in FreeCAD. The interface uses locally installed Futura fonts, with Arial as a fallback.
+
+The app runs the local engine with automatic view selection, dimensioned views only, cut-face-only sections and safe layout adjustments. Each run saves the editable FCStd, a PDF, a preview and review notes in a new `Drawings/<part>-<timestamp>/` folder beside the input. The input and earlier drawings are preserved.
+
+Progress and cancellation remain available while FreeCAD works. Missing material and tolerance values appear in review notes. If saved dimensions change on reopening, automatic opening stops and the app shows the integrity findings.
+
+The launcher sets up its desktop dependencies through `uv` on first use. FreeCAD must already be installed. After setup, drawing creation runs locally without an AI service or MCP connection. You can also launch it from the repository:
+
+```powershell
+uv run --extra desktop free-drawing-ui
+```
+
+Optional overrides for unusual installations: `FREECADCMD` for the console executable and `FREECAD_GUI` for the desktop executable. Application error logs are saved under `%LOCALAPPDATA%/Free Drawing/desktop.log`.
 
 The [Swiss TPD/GPS policy](guidelines/16-swiss-tpd-gps.md) governs new drawings. [Public reference downloads](guidelines/sources/README.md) include the Normen-Auszug 2026 reading sample and standards previews; they do not establish complete normative coverage.
 
@@ -32,10 +48,12 @@ All images come from `samples/run_samples.py` on the bundled sample parts. Nothi
 - **Surface-only models**: closed shells are sewn into solids. Invalid B-reps are repaired with a warning. Inch files are converted to mm on import.
 
 **Automatic view selection**
-- The tool tries 6 front directions and keeps **at least Front, Top and Right** for automatic drawings. It selects the orientation that best exposes features: holes where they appear as circles, faces where they are seen edge-on.
-- Plates retain the three principal views. Turned parts are drawn with the axis horizontal and diameters on the profile. Explicit `views` requests can override automatic selection.
-- If a feature still can't be dimensioned, or would be dimensioned on a hidden line, the tool adds a view. It can remove redundant extra views while retaining Front, Top and Right.
-- **First-angle** (ISO default) or **third-angle** projection. The scale is the largest ISO 5455 scale that fits the sheet, with 1 : 1 preferred.
+- The tool tries 6 front directions with 4 view sets (`Front`, `Front+Top`, `Front+Right`, `Front+Top+Right`). It keeps the **smallest view set that shows every feature characteristically**: holes where they appear as circles, faces where they are seen edge-on.
+- Plates can use one view plus a thickness note. Turned parts are drawn with the axis horizontal and diameters on the profile. Explicit `views` requests can override automatic selection.
+- If a feature still can't be dimensioned, or would be dimensioned on a hidden line, the tool adds a view. Views that carry no unique dimension are removed.
+- `dimensioned_only=True` is the default. Standard, section and detail views must carry dimensions. The coloured isometric is always retained as a recognition view at the bottom right, without dimensions. Undimensioned projection anchors remain hidden in the document so dependent dimensions stay valid.
+- `section_cut_only=True` builds full sections from the exact material faces in the cutting plane. This removes projected geometry behind the cut. Existing full sections can be converted with a `set_view` action using `cut_only=True`.
+- **First-angle** (ISO default) or **third-angle** projection. Standard views share the largest preferred scale that fits their complete annotation footprints, including enlargement. Automatic layout also tries a 90° group orientation for non-turned parts. Detail scales remain separately labelled.
 
 **Feature-based dimensioning (ISO 129-1, [guideline 04](guidelines/04-dimensioning.md))**
 - Positions are measured from datum planes as **baseline/ordinate stacks**: first line 10 mm from the outline, then 8 mm spacing, shortest dimension nearest the part.
@@ -44,13 +62,15 @@ All images come from `samples/run_samples.py` on the bundled sample parts. Nothi
 - **Radii** are grouped (`4× R5`) and slot ends are located. Also covered: **chamfers** (`2× C1.5`), **angles** of inclined faces, spheres (`SR`), and **`t` notes** for plates.
 - **Threads** get a callout when the thread is modelled. A plain tap-drill hole is reported for review (see [Limitations](#limitations)).
 - Each requirement is placed **once**, on visible geometry where any view offers it. A final dedupe pass removes repeated dimensions. Anything the tool could not place is reported, never silently dropped.
-- The dimension style resembles SolidWorks: 0.18 mm lines, slim 3 mm filled arrows, 3.5 mm `osifont` text, ISO-oriented, no unit suffixes.
+- Dimensions use 0.35 mm lines, 3 mm filled arrows and 3.5 mm `osifont` text in paper units. Layout never shrinks the text to fit. Collision checks include exported line extensions, radial shoulders and captions.
+- Standard views carry the main dimensions. Strict automatic output uses at most one section for hidden/unplaced requirements and one detail for genuinely small features; undimensioned extras are hidden.
+- See the [reference-project and dataset review](docs/drawing-reference-review-2026-10-26.md) for source comparisons, adopted approaches and the repeatable paired-STEP evaluation.
 
 **A complete sheet**
 - ISO 5457 template (A4-A0) with a filled title block: title, scale, revision `A`, sheet `1 / 1`, date and the general tolerance.
 - Default notes: `UNITS: mm` and `TOLERANCING PRINCIPLE: ISO 8015`. Tolerance values, material, surface finish and edge allowances require explicit design input. Legacy `ISO 2768-mK` is flagged for review.
 - ISO 128 line weights: 0.7 mm visible, 0.35 mm hidden lines (always shown on orthographic views), and dash-dot centre lines on every cylinder.
-- **Photo-quality colour isometric** in the bottom-right zone, at 1 : 2. It uses true B-rep normals, Phong shading, three-point lighting, supersampling and a contact shadow, with the edges drawn on top.
+- **Colour isometric** in the bottom-right zone at 1 : 2, including with `dimensioned_only=True`. It uses true B-rep normals, Phong shading, three-point lighting, supersampling and a contact shadow, with the edges drawn on top. Layout reserves its space above the title block.
 
 **Inspection and fixes**
 - Covers **every [CHECKLIST](guidelines/CHECKLIST.md) item A.1-P.5** in about 20 ms of pure Python on a JSON snapshot. FreeCAD isn't needed for this step.

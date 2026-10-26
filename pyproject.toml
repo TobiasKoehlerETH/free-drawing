@@ -8,9 +8,15 @@ authors = [{ name = "Tobias Koehler", email = "tobiassskoehler@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = ["mcp[cli]>=1.2"]
 
+[project.optional-dependencies]
+desktop = ["PySide6-Essentials>=6.8,<7"]
+
 [project.scripts]
 free-drawing-mcp = "free_drawing_mcp.server:main"
 free-drawing-check = "free_drawing_mcp.cli:main"
+
+[project.gui-scripts]
+free-drawing-ui = "free_drawing_mcp.desktop:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]

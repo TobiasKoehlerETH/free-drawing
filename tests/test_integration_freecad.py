@@ -65,9 +65,17 @@ def test_create_and_inspect(drawing):
     assert not bad, rep.text()
     ortho = [v for v in snap["views"] if v["kind"] == "ortho"]
     pictorial = [v for v in snap["views"] if v["kind"] == "pictorial"]
-    assert {"Front", "Top", "Right"} <= {v["projection_type"] for v in ortho}
-    assert pictorial and pictorial[0]["shaded"]
-    assert snap["title_block"]["scale"] == "1 : 1"
+    assert len(ortho) == 2, [v["projection_type"] for v in ortho]
+    assert len(pictorial) == 1 and pictorial[0]["shaded"]
+    iso_box = pictorial[0]["bbox"]
+    assert iso_box[0] > snap["sheet"]["width"] * 0.55
+    assert iso_box[1] >= snap["sheet"]["title_block"][3]
+    from free_drawing_mcp.rules.geom import overlap
+    assert not any(overlap(iso_box, d["text_box"]) for d in snap["dimensions"] if d.get("text_box"))
+    assert not any(overlap(iso_box, v["bbox"]) for v in ortho)
+    assert all(any(d["view"] == v["name"] for d in snap["dimensions"]) for v in ortho)
+    assert snap["title_block"]["scale"] == created["scale"]
+    assert len({v["scale"] for v in ortho}) == 1
     assert [f.status for f in rep.findings if f.rule == "K.1"] == ["fail"]
 
 

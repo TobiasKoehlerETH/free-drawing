@@ -160,6 +160,22 @@ def test_c2_pass_first_angle(snap):
     assert statuses(snap, "C.2") == {"pass"}
 
 
+def test_c2_standard_views_must_share_scale(snap):
+    view(snap, "Top")["scale"] = 2.0
+    assert statuses(snap, "C.2") == {"fail"}
+
+
+@pytest.mark.parametrize("kind", ["ortho", "section", "detail"])
+def test_c3_empty_views_fail_dimensioned_only_policy(snap, kind):
+    snap["meta"]["dimensioned_only"] = True
+    snap["views"] = [v for v in snap["views"] if v["kind"] != "pictorial"]
+    snap["views"].append({"name": "Empty", "kind": kind, "caption": "A", "center": [200, 200], "scale": 1})
+    findings = only(snap, "C.3")
+    assert len(findings) == 1 and findings[0].status == "fail"
+    assert findings[0].objects == ["Empty"]
+    assert findings[0].fix is None  # deleting a parent can break dependent geometry
+
+
 def test_c2_top_view_above_front_is_wrong_in_first_angle(snap):
     view(snap, "Top")["center"] = [100.0, 230.0]
     f = only(snap, "C.2")[0]
@@ -207,6 +223,18 @@ def test_c7_missing_isometric(snap):
     snap["views"] = [v for v in snap["views"] if v["kind"] != "pictorial"]
     f = only(snap, "C.7")[0]
     assert f.status == "fail" and "no isometric" in f.message
+
+
+def test_c7_dimensioned_only_policy_still_requires_isometric(snap):
+    snap["views"] = [view for view in snap["views"] if view.get("kind") != "pictorial"]
+    snap["meta"]["dimensioned_only"] = True
+    assert statuses(snap, "C.7") == {"fail"}
+
+
+def test_dimensioned_only_keeps_undimensioned_colour_isometric(snap):
+    snap["meta"]["dimensioned_only"] = True
+    assert statuses(snap, "C.3") == {"pass"}
+    assert statuses(snap, "C.7") == {"pass"}
 
 
 def test_c7_unshaded_isometric(snap):
@@ -363,6 +391,17 @@ def test_e9_brackets(snap, text, fmt):
 # --------------------------------------------------------------------- E.10
 def test_e10_pass(snap):
     assert statuses(snap, "E.10") == {"pass"}
+
+
+def test_e10_detects_exported_shoulder_that_theoretical_line_misses(snap):
+    dim(snap, "DimD")["ink_lines"] = [[90, 207, 110, 207]]
+    assert "fail" in statuses(snap, "E.10")
+
+
+def test_e10_detects_dimension_text_crossing_caption(snap):
+    view(snap, "Front")["caption"] = "A-A"
+    view(snap, "Front")["caption_box"] = list(dim(snap, "DimX")["text_box"])
+    assert "fail" in statuses(snap, "E.10")
 
 
 def _apply_move(snap, act):

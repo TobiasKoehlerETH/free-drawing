@@ -89,6 +89,7 @@ from . import geometry as G
 LETTERS = [c for c in "ABCDEFGHJKLMNPRTUVWY"]  # I O Q S X Z are not used [03][11]
 SECTION_PROP = "FDSection"
 DETAIL_PROP = "FDDetail"
+CUT_ONLY_PROP = "FDCutOnly"
 
 SMALL_PAPER = 3.0  # mm: features smaller than this on paper need a detail [03 project rule]
 TARGET_PAPER = 8.0  # mm: smallest feature size wanted inside the detail
@@ -134,11 +135,16 @@ def used_letters(page):
     """Section symbols and detail references already on ``page``."""
     out = set()
     for o in page.Views:
-        if o.TypeId in ("TechDraw::DrawViewSection", "TechDraw::DrawComplexSection"):
+        if is_section(o):
             out.add(str(o.SectionSymbol))
         elif o.TypeId == "TechDraw::DrawViewDetail":
             out.add(str(o.Reference))
     return {x for x in out if x}
+
+
+def is_section(view):
+    return (view.TypeId in ("TechDraw::DrawViewSection", "TechDraw::DrawComplexSection")
+            or bool(getattr(view, CUT_ONLY_PROP, False)))
 
 
 def next_letters(used, n):
@@ -592,7 +598,7 @@ def _pat_file():
     return p if os.path.isfile(p) else None
 
 
-def add_section(doc, page, base_view, plan, scale, x=None, y=None, name=None):
+def add_section(doc, page, base_view, plan, scale, x=None, y=None, name=None, cut_only=False):
     """Create the TechDraw section view for ``plan`` and verify it has geometry.
 
     Full sections are ``DrawViewSection``; half sections a
@@ -601,6 +607,8 @@ def add_section(doc, page, base_view, plan, scale, x=None, y=None, name=None):
     only. Raises ``RuntimeError`` (and removes the object) when TechDraw
     produces no geometry.
     """
+    if cut_only and plan.get("half"):
+        raise ValueError("cut_only needs a full section; create the section with half=false")
     letter = plan["letter"]
     D = _v(plan["normal"])
     X = _v(plan["x_direction"])
@@ -677,7 +685,170 @@ def add_section(doc, page, base_view, plan, scale, x=None, y=None, name=None):
             doc.removeObject(prof.Name)
         doc.recompute()
         raise RuntimeError(f"section {letter}–{letter} produced no geometry ({status})")
-    return sec
+    return set_cut_only(doc, page, sec, True) if cut_only else sec
+
+
+def _remap_section_dimensions(doc, old, new):
+    """Resolve references against matching geometry; never reuse an EdgeN/VertexN."""
+    old_center, new_center = view_center3d(old), view_center3d(new)
+    _, xdir, up = _frame(old)
+    delta = old_center - new_center
+    dx, dy = delta.dot(xdir), delta.dot(up)
+    vertices, edges = list(G.iter_vertices(new)), list(G.iter_edges(new))
+    changes = []
+    for dim in doc.Objects:
+        if dim.TypeId != "TechDraw::DrawViewDimension":
+            continue
+        previous = list(dim.References2D)
+        if not any(obj is old for obj, _ in previous):
+            continue
+        replacement = []
+        for obj, refs in previous:
+            if obj is not old:
+                replacement.append((obj, refs))
+                continue
+            mapped = []
+            for ref in refs:
+                candidates = []
+                if ref.startswith("Vertex"):
+                    p = old.getVertexByIndex(int(ref[6:])).Point
+                    candidates = [f"Vertex{i}" for i, q in vertices
+                                  if math.hypot(p.x + dx - q[0], p.y + dy - q[1]) < 1e-5]
+                elif ref.startswith("Edge"):
+                    edge = old.getEdgeByIndex(int(ref[4:])).copy()
+                    edge.translate(App.Vector(dx, dy, 0))
+                    points = [edge.valueAt(edge.FirstParameter + fraction * (edge.LastParameter - edge.FirstParameter))
+                              for fraction in (0, .25, .5, .75, 1)]
+                    candidates = [f"Edge{i}" for i, e in edges if abs(e.Length - edge.Length) < 1e-5
+                                  and all(Part.Vertex(p).distToShape(e)[0] < 1e-5 for p in points)]
+                if not candidates:
+                    raise ValueError(f"{dim.Name}: {ref} has no matching geometry on the cut surface; reassign this dimension first")
+                mapped.append(candidates[0])
+            replacement.append((new, mapped))
+        changes.append((dim, previous, replacement, float(dim.getRawValue())))
+    return changes
+
+
+def _switch_section_view(doc, page, old, new):
+    dependent_details = [o.Name for o in doc.Objects if o.TypeId == "TechDraw::DrawViewDetail"
+                         and getattr(o, "BaseView", None) is old]
+    if dependent_details:
+        raise ValueError(f"recreate dependent detail views before changing section geometry: {dependent_details}")
+    changes = _remap_section_dimensions(doc, old, new)
+    try:
+        for dim, _, refs, _ in changes:
+            dim.References2D = refs
+        doc.recompute()
+        for dim, _, _, expected in changes:
+            if not dim.isValid() or abs(float(dim.getRawValue()) - expected) > 1e-5:
+                raise ValueError(f"{dim.Name}: section conversion changed its measurement")
+    except Exception:
+        for dim, refs, _, _ in changes:
+            dim.References2D = refs
+        doc.recompute()
+        raise
+    page.removeView(old)
+    if new not in page.Views:
+        position = (float(new.X), float(new.Y))
+        page.addView(new)
+        new.X, new.Y = position
+    old.Visibility = False
+    new.Visibility = True
+
+
+def set_cut_only(doc, page, view, enabled=True):
+    """Show an exact planar material section, retaining a restorable native cut.
+
+    A native DrawViewPart projects actual cut-face B-reps, and native
+    DrawGeomHatch objects hatch those faces in the saved FCStd. The original
+    model and full section remain intact. Conversion refuses dimensions whose
+    referenced geometry does not exist on the plane.
+    """
+    current = bool(getattr(view, CUT_ONLY_PROP, False))
+    if current == bool(enabled):
+        return view
+    if not is_section(view):
+        raise ValueError("cut_only applies to a section view")
+    if not enabled:
+        original = view.FDOriginalSection
+        added = original not in page.Views
+        if added:
+            page.addView(original)
+        original.X, original.Y = float(view.X), float(view.Y)
+        original.ScaleType, original.Scale = "Custom", G.view_scale(view)
+        original.Caption = view.Caption
+        original.Visibility = True
+        doc.recompute()
+        G.wait_for_geometry(original)
+        try:
+            _switch_section_view(doc, page, view, original)
+        except Exception:
+            if added:
+                page.removeView(original)
+                original.Visibility = False
+            raise
+        for hatch in getattr(view, "FDCutHatches", []):
+            hatch.Visibility = False
+        return original
+    plan = dict(_section_plan_of(view))
+    if plan.get("half"):
+        raise ValueError("cut_only needs a full section; create the section with half=false")
+    shape = _source_shape(view)
+    faces = cut_faces(shape, view.SectionNormal, view.SectionOrigin)
+    if not faces:
+        raise ValueError("the section plane does not intersect material")
+    created = []
+    try:
+        source = doc.addObject("Part::Feature", f"{view.Name}CutFaces")
+        created.append(source)
+        source.Label = f"{view.Label} — exact cut faces"
+        source.Shape = Part.makeCompound(faces)
+        source.Visibility = False
+        source.addProperty("App::PropertyLinkList", "FDOriginalSources", "FreeDrawing")
+        source.FDOriginalSources = list(view.Source)
+        projection = doc.addObject("TechDraw::DrawViewPart", f"{view.Name}Cut")
+        created.append(projection)
+        projection.Label, projection.Caption = view.Label, view.Caption
+        projection.Source = [source]
+        projection.Direction, projection.XDirection = view.Direction, view.XDirection
+        projection.ScaleType, projection.Scale = "Custom", G.view_scale(view)
+        projection.X, projection.Y = float(view.X), float(view.Y)
+        projection.HardHidden = False
+        projection.SmoothVisible = projection.SeamVisible = False
+        for typ, name, value in (
+            ("App::PropertyBool", CUT_ONLY_PROP, True),
+            ("App::PropertyLink", "FDOriginalSection", view),
+            ("App::PropertyLink", "BaseView", view.BaseView),
+            ("App::PropertyVector", "SectionNormal", view.SectionNormal),
+            ("App::PropertyVector", "SectionOrigin", view.SectionOrigin),
+            ("App::PropertyString", "SectionSymbol", str(view.SectionSymbol)),
+        ):
+            projection.addProperty(typ, name, "FreeDrawing")
+            setattr(projection, name, value)
+        plan["cut_only"] = True
+        _set_prop(projection, SECTION_PROP, json.dumps(plan, ensure_ascii=False))
+        page.addView(projection)
+        projection.X, projection.Y = float(view.X), float(view.Y)
+        doc.recompute()
+        G.wait_for_geometry(projection)
+        if not projection.isValid() or not projection.getVisibleEdges():
+            raise RuntimeError("cut-face projection produced no geometry")
+        hatch = doc.addObject("TechDraw::DrawGeomHatch", f"{projection.Name}Hatch")
+        created.append(hatch)
+        hatch.Source = (projection, [f"Face{i}" for i in range(len(faces))])
+        hatch.FilePattern, hatch.NamePattern, hatch.ScalePattern = _pat_file(), HATCH_PATTERN, HATCH_SCALE
+        projection.addProperty("App::PropertyLinkList", "FDCutHatches", "FreeDrawing")
+        projection.FDCutHatches = [hatch]
+        doc.recompute()
+        if not hatch.isValid():
+            raise RuntimeError("cut-face native hatch is invalid")
+        _switch_section_view(doc, page, view, projection)
+        return projection
+    except Exception:
+        for obj in reversed(created):
+            doc.removeObject(obj.Name)
+        doc.recompute()
+        raise
 
 
 def add_detail(doc, page, base_view, plan, x=None, y=None, name=None):
@@ -753,7 +924,7 @@ def _spec_items(vg, sp, scale):
     return None
 
 
-def decide_details(view_geoms, specs, scale, used_letters=(), max_details=3):
+def decide_details(view_geoms, specs, scale, used_letters=(), max_details=3, small_only=False):
     """Detail plans where features are too small or dimensions too crowded.
 
     ``scale`` is the sheet scale of the base views. Each cluster of small
@@ -775,7 +946,7 @@ def decide_details(view_geoms, specs, scale, used_letters=(), max_details=3):
     for name, (vg, items) in by_view.items():
         small = [it for it in items if it["size"] * scale < SMALL_PAPER]
         # crowding: >= 3 short dimensions whose targets share a ~10 mm spot
-        short = [it for it in items if it["size"] * scale < 2 * TARGET_PAPER and it not in small]
+        short = [] if small_only else [it for it in items if it["size"] * scale < 2 * TARGET_PAPER and it not in small]
         for it in short:
             mid = _centroid(it["pts"])
             near = [o for o in short + small if o is not it and G.dist(_centroid(o["pts"]), mid) * scale < CROWD_PAPER / 2]
@@ -794,6 +965,10 @@ def decide_details(view_geoms, specs, scale, used_letters=(), max_details=3):
                 groups.remove(g)
             groups.append(merged)
         for g in groups:
+            if small_only and len({item["label"] for item in g}) < 2:
+                # A single small chamfer/radius can use a readable external
+                # callout on its standard view; it does not justify a detail.
+                continue
             clusters.append((vg, g))
     if not clusters:
         return []
@@ -868,7 +1043,7 @@ def _occupied(page, pad_dims=2.0):
     # cutting-plane labels and detail circles on base views
     for obj in page.Views:
         try:
-            if obj.TypeId in ("TechDraw::DrawViewSection", "TechDraw::DrawComplexSection"):
+            if is_section(obj):
                 cl = section_record(obj).get("cutting_line") or {}
                 for lt in cl.get("letters", []):
                     x, y = lt["at"]
@@ -988,7 +1163,8 @@ def _rel_box(view):
 
 
 def add_sections_and_details(doc, page, shape, view_geoms, specs, reqs, info, scale, keepouts=None,
-                             projection="first", sections=True, details=True, max_sections=2, max_details=3):
+                             projection="first", sections=True, details=True, max_sections=2, max_details=3,
+                             cut_only=False, small_details_only=False):
     """Decide, create and place sections and details in one call (post-pass)."""
     info = dict(info or {})
     res = {"sections": [], "details": [], "plans": [], "notes": [], "unplaced": []}
@@ -1000,7 +1176,9 @@ def add_sections_and_details(doc, page, shape, view_geoms, specs, reqs, info, sc
         for plan in plans:
             base = by_name[plan["base"]].view
             try:
-                sec = add_section(doc, page, base, plan, scale)
+                if cut_only:
+                    plan = dict(plan, half=False, half_up=None, axis_point=None)
+                sec = add_section(doc, page, base, plan, scale, cut_only=cut_only)
             except Exception as e:
                 res["notes"].append(f"section {plan['letter']} failed: {e}")
                 continue
@@ -1025,7 +1203,7 @@ def add_sections_and_details(doc, page, shape, view_geoms, specs, reqs, info, sc
             res["sections"].append(sec.Name)
             res["plans"].append(plan)
     if details:
-        plans = decide_details(view_geoms, specs, scale, used, max_details)
+        plans = decide_details(view_geoms, specs, scale, used, max_details, small_only=small_details_only)
         for plan in plans:
             base = by_name[plan["base"]].view
             try:
@@ -1082,6 +1260,8 @@ def view_center3d(view):
     ``dimensions.ViewGeom(view, view_center3d(view), key)``.
     """
     t = view.TypeId
+    if bool(getattr(view, CUT_ONLY_PROP, False)):
+        return _source_center(view)
     if t == "TechDraw::DrawViewDetail":
         base = view.BaseView
         bc = view_center3d(base)
@@ -1138,6 +1318,13 @@ def section_record(view):
     "axis_line": [x0, y0, x1, y1] | None}``
     """
     rec = {"section_symbol": str(getattr(view, "SectionSymbol", "") or "")}
+    rec["cut_only"] = bool(getattr(view, CUT_ONLY_PROP, False))
+    if rec["cut_only"]:
+        rec["original_section"] = view.FDOriginalSection.Name
+        native_hatches = list(getattr(view, "FDCutHatches", []) or [])
+        rec["native_hatch"] = bool(native_hatches) and all(h.isValid() for h in native_hatches)
+        if not rec["native_hatch"]:
+            rec["hatch_error"] = "native cut-face hatch is missing or invalid"
     base = getattr(view, "BaseView", None)
     rec["base_view"] = base.Name if base is not None else None
     plan = _section_plan_of(view)
@@ -1160,7 +1347,7 @@ def section_record(view):
             _, x, up = _frame(view)
             sc = G.view_scale(view)
             ox, oy = G.view_origin(view)
-            for f in cut_faces(shape, n, O, half_up, ap):
+            for f in (shape.Faces if rec["cut_only"] else cut_faces(shape, n, O, half_up, ap)):
                 for w in f.Wires:
                     try:
                         pts = w.discretize(Deflection=0.02)

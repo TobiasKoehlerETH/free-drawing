@@ -16,10 +16,11 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 import xmlrpc.client
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 ADDON_DIR = Path(__file__).resolve().parents[2] / "addon" / "FreeDrawingMCP"
 DEFAULT_PORT = 9876
@@ -27,6 +28,10 @@ DEFAULT_PORT = 9876
 
 class BackendError(RuntimeError):
     pass
+
+
+class BackendCancelled(BackendError):
+    """The caller cancelled its own headless FreeCAD job."""
 
 
 class _TimeoutTransport(xmlrpc.client.Transport):
@@ -83,9 +88,18 @@ class RpcBackend:
 
 def _read_progress(path: Path) -> list[dict[str, Any]]:
     try:
-        return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
-    except (OSError, ValueError):
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
         return []
+    stages = []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            stages.append(json.loads(line))
+        except ValueError:
+            break  # the FreeCAD process may still be writing the last line
+    return stages
 
 
 def _last_stage(path: Path) -> str:
@@ -118,15 +132,20 @@ def detect_freecadcmd() -> list[str] | None:
 class HeadlessBackend:
     kind = "headless"
 
-    def __init__(self, command: list[str] | None = None, timeout: float = 600, job_root: str | None = None):
+    def __init__(self, command: list[str] | None = None, timeout: float = 600, job_root: str | None = None,
+                 on_progress: Callable[[dict[str, Any]], None] | None = None,
+                 cancel_event: threading.Event | None = None):
         self.command = command or detect_freecadcmd()
         self.timeout = timeout
         self.job_root = job_root  # where fd_job_* work folders go (default: system temp)
+        self.on_progress = on_progress
+        self.cancel_event = cancel_event
 
     def available(self) -> bool:
         return bool(self.command)
 
     def run(self, steps: list[dict[str, Any]]) -> list[Any]:
+        self._check_cancelled()
         if not self.command:
             raise BackendError("freecadcmd not found: install FreeCAD or pass --freecadcmd / set FREECADCMD")
         if not math.isfinite(self.timeout) or self.timeout <= 0:
@@ -144,17 +163,15 @@ class HeadlessBackend:
             env = dict(os.environ, FD_JOB=str(job), FD_ADDON_DIR=str(ADDON_DIR), QT_QPA_PLATFORM="offscreen")
             argv = self.command + ["-c", f"exec(open({str(runner)!r}, encoding='utf-8').read())"]
             try:
-                proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                      timeout=self.timeout, env=env, cwd=os.getcwd())
+                returncode, stdout, stderr = self._run_process(argv, env, progress, started)
             except subprocess.TimeoutExpired as e:
-                # subprocess.run already killed and reaped the freecadcmd it started
                 keep = bool(os.environ.get("FD_KEEP_FAILED_JOBS"))
                 raise BackendError(self._timeout_message(steps, progress, time.monotonic() - started,
                                                          work if keep else None)) from e
             if not result.exists():
                 keep = bool(os.environ.get("FD_KEEP_FAILED_JOBS"))
-                tail = "\n".join((proc.stderr or proc.stdout or "").splitlines()[-15:])
-                raise BackendError(f"headless FreeCAD exited with {proc.returncode} without a result "
+                tail = "\n".join((stderr or stdout or "").splitlines()[-15:])
+                raise BackendError(f"headless FreeCAD exited with {returncode} without a result "
                                    f"(last stage: {_last_stage(progress)}):\n{tail}")
             out = json.loads(result.read_text(encoding="utf-8"))
         finally:
@@ -163,6 +180,42 @@ class HeadlessBackend:
         if out.get("error"):
             raise BackendError(out["error"] + "\n" + out.get("traceback", ""))
         return out["results"]
+
+    def _check_cancelled(self):
+        if self.cancel_event is not None and self.cancel_event.is_set():
+            raise BackendCancelled("Drawing creation cancelled.")
+
+    def _run_process(self, argv, env, progress: Path, started: float):
+        flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, encoding="utf-8", errors="replace", env=env,
+                                cwd=os.getcwd(), creationflags=flags)
+        delivered = 0
+        try:
+            while True:
+                self._check_cancelled()
+                stages = _read_progress(progress)
+                if self.on_progress:
+                    for event in stages[delivered:]:
+                        self.on_progress(event)
+                delivered = len(stages)
+                remaining = self.timeout - (time.monotonic() - started)
+                if remaining <= 0:
+                    raise subprocess.TimeoutExpired(argv, self.timeout)
+                try:
+                    stdout, stderr = proc.communicate(timeout=min(0.2, remaining))
+                    self._check_cancelled()
+                    if self.on_progress:
+                        for event in _read_progress(progress)[delivered:]:
+                            self.on_progress(event)
+                    return proc.returncode, stdout, stderr
+                except subprocess.TimeoutExpired:
+                    continue
+        finally:
+            # Reap this child even if a callback fails; never touch a user's GUI.
+            if proc.poll() is None:
+                proc.kill()
+            proc.communicate()
 
     def _timeout_message(self, steps, progress: Path, elapsed: float, kept: Path | None) -> str:
         ops = ", ".join(s.get("op", "?") for s in steps)
