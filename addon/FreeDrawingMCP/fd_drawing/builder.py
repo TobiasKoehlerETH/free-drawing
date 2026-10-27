@@ -164,19 +164,11 @@ def unmet(axes_of_views, reqs):
     return out
 
 
-def _thin(shape, axis, ratio=0.2):
-    """A plate: the axis extent is small against the other two [15][04 't']."""
-    bb = G.exact_bbox(shape)
-    ext = {"X": bb.XLength, "Y": bb.YLength, "Z": bb.ZLength}
-    others = sorted(v for k, v in ext.items() if k != axis)
-    return ext[axis] <= ratio * others[0]
-
-
 def choose_layout(shape, reqs, turned_axis=None, views="auto"):
     """Pick front direction and the smallest view set showing every requirement.
 
-    Returns ``(direction, x_direction, view_names, thickness_axis)``; a
-    thickness axis means one view plus a ``t`` note is complete [02 C.3].
+    Returns ``(direction, x_direction, view_names)``. Thickness requires a
+    dimensioned edge view and cannot replace a missing projection with a note.
     """
     fixed = list(views) if views and views != "auto" else None
     best = None
@@ -192,29 +184,24 @@ def choose_layout(shape, reqs, turned_axis=None, views="auto"):
         z_up = 0 if abs(G.up_vector(d, x).z) > 0.99 else 1
         for sub in ([fixed] if fixed else SUBSETS):
             miss = unmet([fa[n] for n in sub if n in fa], reqs)
-            t_axis = None
-            if (sub == ["Front"] and miss and len(miss) == 1 and miss[0]["kind"] == "loc"
-                    and _thin(shape, miss[0]["axis"])):
-                t_axis = miss[0]["axis"]
-                miss = []
             # turned parts: the profile (axis in the plane, horizontal) is the front [02]
             turned_pen = 0 if not turned_axis or turned_axis in fa["Front"][1] else 1
             key = (len(miss), len(sub), turned_pen, z_up, -front_cov)
             if best is None or key < best[0]:
-                best = (key, [(d, x, sub, t_axis)])
+                best = (key, [(d, x, sub)])
             elif key == best[0]:
-                best[1].append((d, x, sub, t_axis))
+                best[1].append((d, x, sub))
     # ties: the direction with the most visible / fewest hidden edges [C.1]
     ties = best[1]
     if len(ties) > 1:
         scored = []
-        for d, x, sub, t in ties:
+        for d, x, sub in ties:
             sc = _proj_score(shape, d) * (1.05 if d == _CANDIDATES[0] else 1.0)
-            scored.append((sc, (d, x, sub, t)))
-        d, x, sub, t = max(scored, key=lambda c: c[0])[1]
+            scored.append((sc, (d, x, sub)))
+        d, x, sub = max(scored, key=lambda c: c[0])[1]
     else:
-        d, x, sub, t = ties[0]
-    return d, x, list(sub), t
+        d, x, sub = ties[0]
+    return d, x, list(sub)
 
 
 # Side of the front view each projection sits on, first-angle [02].
@@ -654,14 +641,8 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
         reqs, _ = sheetmetal.filter_requirements(reqs, shape, sheet_info)
         info["kind"] = "sheet"
     progress.stage("choose_views", requirements=len(reqs))
-    front_dir, front_x, names, t_axis = choose_layout(shape, reqs, turned_axis, views)
-    thickness = None
-    if t_axis:
-        bb3 = G.exact_bbox(shape)
-        thickness = getattr(bb3, t_axis + "Length")
-        reqs = [r for r in reqs if not (r["kind"] == "loc" and r["axis"] == t_axis)]
-    if sheet_info and not thickness:
-        thickness = sheet_info["t"]
+    front_dir, front_x, names = choose_layout(shape, reqs, turned_axis, views)
+    thickness = sheet_info["t"] if sheet_info else None
     grp = doc.addObject("TechDraw::DrawProjGroup", "ProjGroup")
     page.addView(grp)
     grp.Source = [draw_obj]
@@ -819,12 +800,17 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     else:
         cands = [float(_parse_scale(scale))]
     def iso_fit(s):
-        """Bottom-right zone above the title block: 1:2, smaller only if needed [C.7]."""
+        """Keep the coloured recognition model legible in its bottom-right zone."""
         if iso_view is None:
             return None, None
         col_w = frame[2] - tb[0]
         max_h = 0.42 * (frame[3] - tb[3])
-        options = [x for x in REDUCTION_SCALES if x <= ISO_VIEW_SCALE + 1e-9 and x <= s + 1e-9] or [REDUCTION_SCALES[-1]]
+        longest=max(iso_local[2]-iso_local[0],iso_local[3]-iso_local[1])
+        preferred=ISO_VIEW_SCALE
+        if longest*preferred<35:
+            preferred=next((x for x in [1.0]+ENLARGEMENT_SCALES if longest*x>=35),ENLARGEMENT_SCALES[-1])
+        available=list(reversed(ENLARGEMENT_SCALES))+REDUCTION_SCALES
+        options = [x for x in available if x <= preferred + 1e-9 and x <= s + 1e-9] or [REDUCTION_SCALES[-1]]
         for iso_s in options:
             w = (iso_local[2] - iso_local[0]) * iso_s + 2.0
             h = (iso_local[3] - iso_local[1]) * iso_s * 1.06 + 3.5  # + ground shadow room
@@ -917,14 +903,6 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     note_objs = []
     if note_lines:
         note_objs.append(add_note(doc, page, note_lines, (notes_box[0] + notes_box[2]) / 2, (notes_box[1] + notes_box[3]) / 2))
-    if thickness:
-        fv = vobjs["Front"]
-        doc.recompute()
-        bb = G.view_page_bbox(fv)
-        txt = "t" + (f"{thickness:.2f}".rstrip("0").rstrip("."))
-        tw, th = note_size([txt])
-        tnote = add_note(doc, page, [txt], bb[0] + tw / 2, bb[1] - 6.0 - th / 2, name="Thickness")
-        note_objs.append(tnote)
     doc.recompute()
 
     fields = page_mod.default_title_fields(doc, s, title or obj.Label)
@@ -1011,6 +989,7 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
                      "bends": len(sheet_info["bends"])} if sheet_info else None),
              components=[{k: c[k] for k in ("item", "qty", "name")} for c in src_info["components"]],
              iso_shaded=bool(visible_iso is not None and visible_iso.TypeId == "TechDraw::DrawViewImage"),
+             iso_readability_enlarged=bool(visible_iso is not None and iso_s>ISO_VIEW_SCALE),
              threads=[threads_mod.summary(t) for t in thr], tapdrill_review=tap_review,
              drawing_geometry=draw_obj.Name if draw_obj is not obj else None,
              supplementary_views=visible_extra, standards_profile="SN EN ISO / Swiss TPD-GPS",

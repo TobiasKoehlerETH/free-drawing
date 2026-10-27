@@ -13,6 +13,7 @@ from free_drawing_mcp import server  # noqa: E402
 EXPECTED_TOOLS = {
     "drawing_status", "create_drawing", "inspect_drawing", "autofix_drawing", "apply_drawing_actions",
     "render_drawing", "export_drawing", "get_drawing_snapshot", "list_drawing_rules", "execute_code",
+    "verify_drawing_definition",
 }
 
 
@@ -68,6 +69,7 @@ def test_create_drawing_schema():
     assert schema["required"] == ["source"]
     assert {"source", "output", "template", "projection", "scale", "material"} <= set(props)
     assert props["dimensioned_only"]["default"] is True
+    assert props["verify_definition"]["default"] is True
 
 
 def test_guideline_resources_resolve():

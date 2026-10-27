@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import workflow
+from . import workflow, definition
 from .backends import make_backend
 from .rules import highlights, inspect
 
@@ -35,6 +35,7 @@ def main(argv=None):
     ap.add_argument("--backend", default="auto", choices=["auto", "rpc", "headless"])
     ap.add_argument("--purpose", default=None, choices=["manufacturing", "assembly", "reference", "change_notice"])
     ap.add_argument("--no-layout-autofix", action="store_true", help="make: skip the safe layout fixes")
+    ap.add_argument('--no-definition-check',action='store_true',help='make: skip independent drawing-only reconstruction')
     a = ap.parse_args(argv)
 
     if a.command.lower().endswith(".json") and a.target is None:
@@ -45,6 +46,7 @@ def main(argv=None):
 
     be = make_backend(a.backend)
     target = str(Path(a.target).resolve()) if a.target else None
+    definition_ok=True
     if a.command == "make":
         out = a.output or str(Path(target).with_name(Path(target).stem + "_drawing.FCStd"))
         args = {"source": target, "output": out}
@@ -56,6 +58,16 @@ def main(argv=None):
         if not a.no_layout_autofix:
             for line in workflow.autofix(be, target, rules=workflow.LAYOUT_RULES, purpose=a.purpose)[1]:
                 print("layout autofix", line)
+        if not a.no_definition_check and Path(args['source']).suffix.lower() in ('.step','.stp'):
+            import tempfile
+            directory=tempfile.mkdtemp(prefix=Path(target).stem+'-definition-',dir=str(Path(target).parent))
+            try:
+                checked=definition.verify_definition(be,target,args['source'],directory,max_repairs=2)
+                definition_ok=checked['status']=='match_within_scope'
+                print('drawing reconstruction:',checked['status'],'report:',Path(directory)/'verification.json')
+            except Exception as error:
+                definition_ok=False
+                print('drawing reconstruction could not be verified:',error)
     if a.command in ("make", "inspect", "autofix", "render"):
         if a.command == "autofix":
             for line in workflow.autofix(be, target, rules=a.rules, purpose=a.purpose)[1]:
@@ -67,7 +79,7 @@ def main(argv=None):
             img = be.run([{"op": "render", "args": {"doc": target, "highlights": highlights(rep), "width": 2400}}])[0]
             Path(a.png).write_bytes(base64.b64decode(img["png_base64"]))
             print(f"preview: {a.png}")
-        return 1 if rep.result() == "FAIL" else 0
+        return 1 if rep.result() == "FAIL" or not definition_ok else 0
     ap.error(f"unknown command {a.command}")
 
 

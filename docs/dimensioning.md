@@ -1,6 +1,6 @@
 # The dimensioning engine
 
-`create_drawing` contains no part-specific templates. One general pipeline decides what to dimension from the 3D B-rep, then how to show it on the views. That is why it works for any STEP file, not just the sample parts. This page walks through that pipeline and links each step to the guideline it implements.
+`create_drawing` uses a general pipeline to identify dimension requirements from the 3D B-rep and place them on drawing views. Unsupported features remain explicit gaps. A successful export does not establish a complete definition; the [independent reconstruction check](drawing-reconstruction-design.md) provides a separate, scoped geometric check.
 
 ```
 importer.read_shape / align          any STEP -> repaired, aligned solid
@@ -40,7 +40,7 @@ A *requirement* is one controlling piece of information the drawing must state *
 
 Details:
 
-- **Hole stacks.** Internal cylinders are grouped by axis line. The smallest radius is the hole and a larger coaxial cylinder is the counterbore. A coaxial cone gives the countersink diameter and included angle. *THRU* is decided by probing just beyond both ends with `isInside`. Holes with an identical signature (axis, ⌀, through/depth, counterbore, countersink) form one group, which gives the `n×` multiplicity (E.8).
+- **Hole stacks.** Connected internal cylinders are grouped by axis line. The smallest radius is the hole and a larger coaxial cylinder is the counterbore. Connected internal cones can define countersinks. *THRU* requires exterior openings at both ends; opening into another internal passage is insufficient. Separate coaxial blind holes remain distinct. Group signatures include depth, counterbore, countersink and whether the countersink is on both ends.
 - **Hole locations.** Each hole centre is located along the two other axes, except when the hole is part of a PCD pattern, or is concentric with an outer cylinder (tube bore, flange bore). Those are already defined by the ⌀ and the PCD.
 - **Bolt circles.** 2×2 patterns at 45° are left to coordinate dimensioning, which is clearer for rectangular layouts. A pattern centre that is not concentric with an outer cylinder is located like a hole.
 - **Bosses.** A cylinder that forms the outer boundary of the part is not located: its ⌀ and the overall size already fix it.
@@ -67,7 +67,7 @@ The search covers six front directions (±X, ±Y, ±Z) and four view sets: `[Fro
 4. model Z up preferred
 5. most requirements visible in the front view alone
 
-**Plates.** If one view leaves exactly one requirement unmet, that requirement is the thickness, and the part is thin along that axis (≤ 0.2 × the smaller other extent), then one view plus a `t12` note is complete ([04](../guidelines/04-dimensioning.md) `t` notation, [15](../guidelines/15-sheet-metal-bends.md)).
+**Plates.** Thickness remains a geometric requirement when views are selected. Keep an edge view with a native thickness dimension at the shared scale. A `t12` note cannot replace that view or dimension. Bent sheet metal also receives a dimension between actual wall faces, using a section when necessary.
 
 **Ties.** Ties go to the direction that "shows more than it hides" (C.1). The score is the sum of facing-area weights, with curved faces (holes, bosses) weighted 3×, so the side with the functional features wins.
 
@@ -102,7 +102,7 @@ Every change is reported in the `create_drawing` warnings, for example `added Ri
 
 - **Space reserved per view and side**: stack depth = `10 + (n−1)·8 + 3.5 + 1.5` mm for n stacked lines, plus 16 mm on the top/right when a view carries radial callouts, plus a 12 mm gap between views.
 - **Scales tried**: ISO 5455 scales from large to small: 1 : 1, 1 : 2, 1 : 5 … 1 : 100. Enlargements only with `allow_enlarge`. The first scale whose whole layout fits one of the free regions wins. The regions are: left of the title-block column; above the title block left of the isometric; and the full-width band. The keep-outs are the title block, the isometric, the notes and the parts list (A.8, P.6).
-- **Isometric**: placed bottom-right above the title block at 1 : 2. It is only reduced if it would exceed the column width or 42 % of the height above the title block (C.7).
+- **Isometric**: placed bottom-right above the title block, normally at 1 : 2. Tiny parts are enlarged for recognition and large parts are reduced to fit the reserved space (C.7).
 
 ## 7. Placement and collision avoidance (`dimensions.place`)
 

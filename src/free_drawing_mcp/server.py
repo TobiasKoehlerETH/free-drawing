@@ -30,7 +30,7 @@ except ImportError:  # mcp 2.x
 from mcp.types import ImageContent, TextContent
 
 from .backends import BackendError, HeadlessBackend, RpcBackend, detect_freecadcmd
-from . import workflow
+from . import workflow, definition as definition_workflow
 from .rules import catalog, highlights, inspect
 
 logger = logging.getLogger("free-drawing-mcp")
@@ -137,6 +137,7 @@ def create_drawing(
     sections: bool = True,
     details: bool = True,
     dimensioned_only: bool = True,
+    verify_definition: bool = True,
     section_cut_only: bool = False,
     purpose: Literal["manufacturing", "assembly", "reference", "change_notice"] = "manufacturing",
     layout_autofix: bool = True,
@@ -166,6 +167,8 @@ def create_drawing(
         sections / details: add automatic cuts and enlarged feature views where needed.
         dimensioned_only: default True; omit undimensioned defining views while
             retaining the coloured isometric at the bottom right and hidden dependency objects.
+        verify_definition: rebuild supported geometry from drawing-only evidence,
+            compare to the STEP, and apply at most two visible definition repairs.
         section_cut_only: project exact cut faces without geometry beyond the section plane.
         purpose: what the drawing is for; reference/assembly/change-notice drawings
             relax part-definition and specification checks (never physical layout checks).
@@ -204,6 +207,18 @@ def create_drawing(
         if layout_autofix:
             _, log, _ = workflow.autofix(backend(), doc, created["page"], rules=workflow.LAYOUT_RULES, purpose=purpose)
             lines.extend(f"layout autofix {l}" for l in log)
+        if verify_definition and Path(src).suffix.lower() in ('.step','.stp') and Path(src).is_file():
+            import tempfile
+            verification_dir=tempfile.mkdtemp(prefix=Path(doc).stem+'-definition-',dir=str(Path(doc).parent))
+            try:
+                verification=definition_workflow.verify_definition(backend(),doc,src,verification_dir,max_repairs=2)
+                lines.append('drawing reconstruction: '+verification['status']+'; report: '+str(Path(verification_dir)/'verification.json'))
+                if verification.get('final_dimension_count') is not None:
+                    lines.append('saved drawing dimensions: '+str(verification['final_dimension_count']))
+            except Exception as error:
+                lines.append('drawing reconstruction could not be verified: '+str(error))
+        elif verify_definition:
+            lines.append('drawing reconstruction not run: the original STEP file is required')
         result: list[Any] = [_text("\n".join(lines))]
         if inspect_result:
             _, more = _inspect_and_render(doc, created["page"], render, purpose=purpose)
@@ -211,6 +226,23 @@ def create_drawing(
         return result
     except Exception as e:
         return _err(e)
+
+
+@mcp.tool()
+def verify_drawing_definition(doc: str, source: str, output_dir: str, max_repairs: int = 2,
+                              tolerance: float = 1e-5) -> list[TextContent]:
+    """Rebuild from drawing-only evidence and compare with the input STEP.
+
+    At most max_repairs visible repairs are applied to the saved drawing.
+    Use 0 for a read-only audit. Unsupported geometry is never counted as a match.
+    output_dir must be new or empty. tolerance is numerical comparison precision
+    in mm, not a manufacturing tolerance.
+    """
+    try:
+        report=definition_workflow.verify_definition(backend(),doc,source,output_dir,max_repairs,tolerance)
+        return [_text(json.dumps(report,indent=2,ensure_ascii=False))]
+    except Exception as error:
+        return _err(error)
 
 
 @mcp.tool()

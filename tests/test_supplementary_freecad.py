@@ -46,6 +46,6 @@ def test_supplementary_views_survive_reopen(tmp_path, name, folder, kind, projec
     assert not [f for f in findings if f.rule in ("D.1", "D.2", "E.1", "E.11") and f.status == "fail"]
     if name == "counterbored_block":
         assert not [f for f in findings if f.rule == "E.5" and f.status == "warn"]
-        assert any(d["view"] in {v["name"] for v in selected} for d in snapshot["dimensions"])
+        assert any('6.8' in d['text'] and '⌴' in d['text'] for d in snapshot['dimensions'])
     if name == "flange":
         assert {90, 120}.issubset({round(d["value"]) for d in snapshot["dimensions"] if d["value"]})

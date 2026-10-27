@@ -16,6 +16,7 @@ from typing import Callable
 from .backends import BackendCancelled, BackendError, HeadlessBackend
 from .rules import inspect
 from .workflow import LAYOUT_RULES
+from .definition import verify_definition
 
 DrawingCancelled = BackendCancelled
 ProgressCallback = Callable[[dict], None]
@@ -31,6 +32,7 @@ class DrawingOptions:
     title: str = ""
     export_pdf: bool = True
     layout_autofix: bool = True
+    verify_definition: bool = True
     timeout: float = 600
 
 
@@ -97,6 +99,17 @@ def create_drawing(options: DrawingOptions, on_progress: ProgressCallback | None
         errors.extend(fix_errors)
         notices.extend(fix_notices)
     _check_cancelled(cancel_event)
+    definition_result=None
+    if options.verify_definition and not errors:
+        _emit(on_progress,'definition','Checking whether the drawing defines the part')
+        try:
+            definition_result=verify_definition(backend,document,source,output/'definition',max_repairs=2,cancel_event=cancel_event)
+            snapshot=backend.run([_snapshot_step(document)])[0]
+            notices.append('Drawing reconstruction: '+definition_result['status']+' (see definition/verification.json).')
+        except BackendCancelled:
+            raise
+        except Exception as error:
+            notices.append('Drawing reconstruction could not be verified: '+str(error))
     report = inspect(snapshot)
     inspection = report.to_dict(include_pass=True)
 
@@ -122,6 +135,7 @@ def create_drawing(options: DrawingOptions, on_progress: ProgressCallback | None
     report_data = dict(inspection, source=str(source), document=str(document),
                        created_at=datetime.now().astimezone().isoformat(), seconds=seconds,
                        integrity_errors=errors, notices=notices,
+                       definition_verification=definition_result,
                        engine="offline FreeCADCmd", export_source="schematic")
     report_json.write_text(json.dumps(report_data, ensure_ascii=False, indent=2), encoding="utf-8")
     report_text = report.text()

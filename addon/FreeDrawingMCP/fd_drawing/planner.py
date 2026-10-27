@@ -29,7 +29,9 @@ def _match(points, la, vg, coord, tol=2e-3):
         mv = vg.model_value(la, p[la])
         if mv is not None and abs(mv - coord) < tol:
             out.append(p)
-    return out
+    if not out:return out
+    closest=min(abs(vg.model_value(la,p[la])-coord) for p in out)
+    return [p for p in out if abs(vg.model_value(la,p[la])-coord)<=closest+1e-7]
 
 
 def _local_axis_for(vg, axis):
@@ -74,7 +76,8 @@ class Realizer:
         best = None
         for c in vg.circles:
             if abs(c["radius"] - radius) < 2e-3 and abs(c["center"][0] - lc[0]) < 2e-3 and abs(c["center"][1] - lc[1]) < 2e-3:
-                if best is None or (c["visible"] and not best["visible"]):
+                error=lambda item:(abs(item['radius']-radius),math.hypot(item['center'][0]-lc[0],item['center'][1]-lc[1]),not item['visible'])
+                if best is None or error(c)<error(best):
                     best = c
         return best
 
@@ -108,6 +111,8 @@ class Realizer:
         turned = _profile_dia(r)
         for vg in self.views:
             if vg.view_axis() == r["axis"]:
+                if r.get('entry_sign') and vg.direction['XYZ'.index(r['axis'])]*r['entry_sign']<.99:
+                    continue
                 # circle view: callout on the circle nearest the free corner
                 circs = [self._circle_in(vg, c, radius) for c in r["centers"]]
                 circs = [c for c in circs if c]
@@ -130,6 +135,9 @@ class Realizer:
                     other = "y" if la_across == "x" else "x"
                     pair = None
                     for a in sorted(lo, key=lambda p: -p["visible"]):
+                        axial_coordinate=vg.model_value(other,a[other])
+                        if r.get('extents') and (axial_coordinate is None or not any(low-1e-6<=axial_coordinate<=high+1e-6 for low,high in r['extents'])):
+                            continue
                         for b in hi:
                             if abs(a[other] - b[other]) < 2e-3:
                                 pair = (a, b)

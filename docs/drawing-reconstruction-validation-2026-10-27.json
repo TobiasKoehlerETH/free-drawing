@@ -1,0 +1,830 @@
+{
+  "date": "2026-10-27",
+  "tests_verified": 269,
+  "final_pure_python_tests_passed": 232,
+  "freecad_tests_passed_in_full_run": 37,
+  "final_angle_regression_passed": 1,
+  "test_warnings": [
+    "Two existing Qt deprecation warnings"
+  ],
+  "cases": [
+    {
+      "part": "cadsy_part_0001",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "7d974fc37d9991a296c939ae97b71d1425fcd458da17ad5e0e79bba5bc84b54e",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 25,
+      "scale": "1 : 1",
+      "gaps": [
+        {
+          "code": "unsupported_profile",
+          "message": "No supported fully constrained profile; bends, blends and multi-axis features need another grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [],
+      "comparison": null
+    },
+    {
+      "part": "cadsy_part_0013",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "565b7c894d5242e7a7e4ac6f4d250c645c3172598752e9d0629e1d3db1c17f10",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 14,
+      "scale": "2 : 1",
+      "gaps": [
+        {
+          "code": "unsupported_profile",
+          "message": "No supported fully constrained profile; bends, blends and multi-axis features need another grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [],
+      "comparison": null
+    },
+    {
+      "part": "cadsy_part_0026",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "176b2a20aa2b8dc4cc78d34f451f7389fc881997428084732d4caf120223729f",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 35,
+      "scale": "1 : 2",
+      "gaps": [
+        {
+          "code": "unsupported_profile",
+          "message": "No supported fully constrained profile; bends, blends and multi-axis features need another grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "cadsy_part_0039",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "d86c005cb2c3feed91968b43ffcd00ae6ee57c1390cd45ae0dc4e2f2936282ec",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 7,
+      "scale": "1 : 1",
+      "gaps": [
+        {
+          "code": "unhandled_dimension_text",
+          "dimension": "Dimension003",
+          "message": "The complete dimension text is not understood: ⌀9 ↧4.8 ⌵⌀10.6×90°"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "D.1",
+          "status": "fail",
+          "message": "supplementary views do not fit: detail B: no free sheet space"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "cadsy_part_0052",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "7c006af0722f8f4f79d250916fb2397fbcc817fe8fb2bac265037c0645089677",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 23,
+      "scale": "1 : 2",
+      "gaps": [
+        {
+          "code": "unsupported_profile",
+          "message": "No supported fully constrained profile; bends, blends and multi-axis features need another grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "definition requires engineering input: freeform surface: requires an authoritative model/profile specification and functional sections"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: position X=0.0 (boss-center) from datum X=-40.0"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: position Y=0.0 (boss-center) from datum Y=-40.0"
+        },
+        {
+          "rule": "E.5",
+          "status": "warn",
+          "message": "dimensions attached to hidden lines"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "cadsy_part_0065",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "6e8539c4d4db3052379b71399fc4fe33c56091950573646390feb80ed8a5d73e",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 24,
+      "scale": "1 : 1",
+      "gaps": [
+        {
+          "code": "unsupported_profile",
+          "message": "No supported fully constrained profile; bends, blends and multi-axis features need another grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        },
+        {
+          "rule": "E.1",
+          "status": "fail",
+          "message": "not dimensioned: angle of inclined face"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "counterbored_block",
+      "status": "match_within_scope",
+      "attempts": 1,
+      "source_sha256": "5bd7f966a570231be122445b38b3b24bde437ce42f17b9b15ed431d3fc06bcc8",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 7,
+      "scale": "2 : 1",
+      "gaps": [],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        }
+      ],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.15587870704085077,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 0.0,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 97462.23402080081,
+        "rebuilt_volume_mm3": 97462.23402080081,
+        "sampled_boundary_deviation_mm": 3.684285443486848e-15,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "flange",
+      "status": "match_within_scope",
+      "attempts": 2,
+      "source_sha256": "b4a778eeeced7669bbcb229d1980735677547a488dbaa967a81cc7aa87dd48bd",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 5,
+      "scale": "1 : 1",
+      "gaps": [],
+      "repairs": [
+        {
+          "code": "missing_pattern_angle",
+          "published": "bolt-circle angle"
+        }
+      ],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        }
+      ],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.294272983861756,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 2.9103830456733704e-11,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 145070.89476114264,
+        "rebuilt_volume_mm3": 145070.8947611426,
+        "sampled_boundary_deviation_mm": 1.1021821192326178e-14,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "large_frame",
+      "status": "match_within_scope",
+      "attempts": 2,
+      "source_sha256": "2dfbc3bbb3fcedaf5ad38666b5134ebd4efa68945cadd8d6bb366690610e91a2",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 7,
+      "scale": "1 : 5",
+      "gaps": [],
+      "repairs": [
+        {
+          "code": "ambiguous_opening_depth",
+          "published": "verified through-opening group",
+          "members": 1
+        }
+      ],
+      "findings": [
+        {
+          "rule": "C.7",
+          "status": "warn",
+          "message": "isometric at 1 : 10 instead of 1 : 2 (reduced to fit)"
+        }
+      ],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 3.2,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 0.0,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 4000000.000000001,
+        "rebuilt_volume_mm3": 4000000.000000001,
+        "sampled_boundary_deviation_mm": 0.0,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "micro_grooves",
+      "status": "match_within_scope",
+      "attempts": 1,
+      "source_sha256": "7e6c9da219c444d07a31d5efd84aca7f48e3562a0c7bc551a698c2a8b55b27f1",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 9,
+      "scale": "2 : 1",
+      "gaps": [],
+      "repairs": [],
+      "findings": [],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.04431907588272194,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 0.0,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 16436.737365358113,
+        "rebuilt_volume_mm3": 16436.737365358113,
+        "sampled_boundary_deviation_mm": 2.204364238465236e-15,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "mixed_assembly",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "9d8497baa485618a1062ac2a0bf5192ff1c3e02bbe15f468729cc3526e57c20e",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 3,
+      "scale": "1 : 1",
+      "gaps": [
+        {
+          "code": "assembly",
+          "message": "Assembly geometry needs separate component definitions"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "plate_hole_pattern",
+      "status": "match_within_scope",
+      "attempts": 1,
+      "source_sha256": "0eeccb661a7b0d4ef2f50730f9ff124ee431f89eeb17013cfd638584103b725f",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 11,
+      "scale": "1 : 1",
+      "gaps": [],
+      "repairs": [],
+      "findings": [],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.5102203534541077,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 0.0,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 245289.02772990437,
+        "rebuilt_volume_mm3": 245289.02772990437,
+        "sampled_boundary_deviation_mm": 5.2684571588799715e-15,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "rotated_manifold",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "0a63b1b145efa370187497519671bc88ea9bc6cd7aa6be6ac00744e50027cccf",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 13,
+      "scale": "1 : 1",
+      "gaps": [
+        {
+          "code": "supplementary_definition",
+          "message": "Section/detail reconstruction needs a cutting-plane correspondence grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "E.5",
+          "status": "warn",
+          "message": "dimensions attached to hidden lines"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "sheet_tray",
+      "status": "unsupported",
+      "attempts": 1,
+      "source_sha256": "6734bb127bf1a300f2a1105ba534a5f9799d39e2da8574892df7a5d07939ae73",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 18,
+      "scale": "1 : 1",
+      "gaps": [
+        {
+          "code": "supplementary_definition",
+          "message": "Section/detail reconstruction needs a cutting-plane correspondence grammar"
+        }
+      ],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "O.4",
+          "status": "warn",
+          "message": "flat-pattern basis (K-factor or bend table) not stated"
+        }
+      ],
+      "comparison": null
+    },
+    {
+      "part": "slotted_plate",
+      "status": "match_within_scope",
+      "attempts": 2,
+      "source_sha256": "aa562b0171a2c47bd7d3e9b7bbe2d3ba6bd58cc85e7d84bdb82982178a279c92",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 12,
+      "scale": "1 : 1",
+      "gaps": [],
+      "repairs": [
+        {
+          "code": "ambiguous_opening_depth",
+          "published": "verified through-opening group",
+          "members": 1
+        }
+      ],
+      "findings": [],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.16464513262065128,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 0.0,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 40589.46909537384,
+        "rebuilt_volume_mm3": 40589.46909537384,
+        "sampled_boundary_deviation_mm": 7.229248575812844e-15,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "tiny_pin",
+      "status": "match_within_scope",
+      "attempts": 1,
+      "source_sha256": "28a5599e19abd87af1f4cf9021ddcbeb4700c47f8bd7029b26f0cac8477fdb0f",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 6,
+      "scale": "10 : 1",
+      "gaps": [],
+      "repairs": [],
+      "findings": [],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.0016860287520586554,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 0.0,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 114.6985623970672,
+        "rebuilt_volume_mm3": 114.6985623970672,
+        "sampled_boundary_deviation_mm": 1.3777276490407724e-16,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "tube",
+      "status": "match_within_scope",
+      "attempts": 1,
+      "source_sha256": "4c3b3e4b4a53b9d8d2caf0915fd3436367f30859202749584024fc57c9af01d1",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 3,
+      "scale": "2 : 1",
+      "gaps": [],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "E.2",
+          "status": "warn",
+          "message": "very long extension lines - dimension far from its feature"
+        }
+      ],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.3534291735288517,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 2.9103830456733704e-11,
+        "maximum_extent_difference_mm": 0.0,
+        "source_volume_mm3": 84823.00164692444,
+        "rebuilt_volume_mm3": 84823.00164692447,
+        "sampled_boundary_deviation_mm": 6.123233995737e-15,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    },
+    {
+      "part": "turned_shaft",
+      "status": "match_within_scope",
+      "attempts": 1,
+      "source_sha256": "f22296a71d298844c44d71f52a2bcd4bd289dc647a8a28a999628452f0f08482",
+      "source_unchanged": true,
+      "view_checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true
+      },
+      "dimensions": 7,
+      "scale": "2 : 1",
+      "gaps": [],
+      "repairs": [],
+      "findings": [
+        {
+          "rule": "E.2",
+          "status": "warn",
+          "message": "very long extension lines - dimension far from its feature"
+        }
+      ],
+      "comparison": {
+        "status": "match_within_scope",
+        "linear_tolerance_mm": 1e-05,
+        "symmetric_difference_mm3": 0.0,
+        "difference_limit_mm3": 0.13337365390943645,
+        "missing_material_mm3": 0.0,
+        "excess_material_mm3": 0.0,
+        "absolute_volume_difference_mm3": 2.3283064365386963e-10,
+        "maximum_extent_difference_mm": 6.679101716144942e-13,
+        "source_volume_mm3": 85403.41088967364,
+        "rebuilt_volume_mm3": 85403.41088967341,
+        "sampled_boundary_deviation_mm": 7.184918763469982e-13,
+        "source_solids": 1,
+        "rebuilt_solids": 1,
+        "registration": "drawing orientation plus translation only; no dimensional fitting"
+      }
+    }
+  ],
+  "outcomes": {
+    "unsupported": 9,
+    "match_within_scope": 9
+  },
+  "all_view_policies_pass": true,
+  "sources_unchanged": true,
+  "drawings_match_verified_hash": true,
+  "engine_matches_workspace": true,
+  "thickness_notes": 0,
+  "text_or_dimension_line_collision_findings": 0,
+  "angular_arcs_checked": 11,
+  "linear_comparison_tolerance_mm": 1e-05,
+  "code_sha256": {
+    "src\\free_drawing_mcp\\__init__.py": "c0b5a8b74489a9dfc0b112cc254d2160d34f58e3578bc77d4c5d6aaf94659846",
+    "src\\free_drawing_mcp\\backends.py": "f3c2822586ed90ea713bc97a92495045dd176137f7db1921bc09070cea9534fa",
+    "src\\free_drawing_mcp\\cli.py": "586b5aeb4ce55af4e3d47906687eca228f84fa9a63e950ee651b17a09fedf11f",
+    "src\\free_drawing_mcp\\definition.py": "a5355480ada81a770c74c7a3527ae065e58fe3c1c686fb652959f64f1b43471a",
+    "src\\free_drawing_mcp\\desktop.py": "171c3a64cd6fe621c2af9a36c2ca28ec7b37581a45aeae185f7b4c81fbb3a22c",
+    "src\\free_drawing_mcp\\desktop_jobs.py": "1cfe88922907dec6d96fb20e60e09a61ecfdde5b402be60991692c5cd8d08b91",
+    "src\\free_drawing_mcp\\desktop_launch.py": "33c650d018cc61e1292a5a5270090582b019aae7a4c7a659cd0eb05b2558e7d8",
+    "src\\free_drawing_mcp\\drawing_definition.py": "4447fc636e1befa174b114d18b6116aa07c4e85548006ee5e4a5e21462028af2",
+    "src\\free_drawing_mcp\\rules\\__init__.py": "583fa066ea3f840c3dbadf475ae4ca56ebb41b95f6dddb69983979e77c5c787d",
+    "src\\free_drawing_mcp\\rules\\checks.py": "78697a70ecb291437bf49ed31dd4605bce2edcbd22618a1dc6948eddfc86e00e",
+    "src\\free_drawing_mcp\\rules\\geom.py": "9998fa088295db098fe22acd4bf6783615e05ae3e676c5c932a832264de9039c",
+    "src\\free_drawing_mcp\\rules\\model.py": "209442dbef9dade62ef80cc4ea3c66c6f815c12d938e154c4e58ef89f07431f2",
+    "src\\free_drawing_mcp\\rules\\purpose.py": "109d3a79be1742d1d727aa298e37c528526d9716ce6c4c51cd38c5f00c7e14fa",
+    "src\\free_drawing_mcp\\server.py": "f27765a4663f525fc4a76909ed39af40c14bbab0d6baa5495e9b31e93d2a0d80",
+    "src\\free_drawing_mcp\\workflow.py": "1ac41af91c9fc40c08b670a2188117b420fb36fd710afd3d352af61f858c587c",
+    "addon\\FreeDrawingMCP\\fd_drawing\\__init__.py": "9bf1e88261da05b54c5895cbb84e809bfb8c4f31fd20cbe2202237edf1185015",
+    "addon\\FreeDrawingMCP\\fd_drawing\\actions.py": "857f26dfcc1913918e810f6ba003c534ad7f9ef231655e29936514409e2d4df0",
+    "addon\\FreeDrawingMCP\\fd_drawing\\analysis.py": "72605390565da7be7999f14b20976c1d10ee8cb38584932da4cbf4c95254aad5",
+    "addon\\FreeDrawingMCP\\fd_drawing\\annotation_ink.py": "8057bf13c614d764d6efaf984a03a9fe750c6cff7749b0f6f427dbda04eac04a",
+    "addon\\FreeDrawingMCP\\fd_drawing\\annotation_layout.py": "1b9cd3b6c3b1069755ffa410d344f8f26a992991dbdfb98d40ee60e1cb422c60",
+    "addon\\FreeDrawingMCP\\fd_drawing\\builder.py": "d9c714de031b1e4d839992fe61363a9f3137d4544d35cfca20ae6e5f3537a70a",
+    "addon\\FreeDrawingMCP\\fd_drawing\\definition_compare.py": "12fb33fab9adfbaf60748987956e1f88ef807f76f23975ef8ddae29b66187a1e",
+    "addon\\FreeDrawingMCP\\fd_drawing\\definition_repair.py": "1c347bad5c37258fb41db3a024fb27add65de5ce88e30c1107deddea34b4930c",
+    "addon\\FreeDrawingMCP\\fd_drawing\\dimensions.py": "02eb72530b6a62fe4fe0271f19cff39726aa182d1fa47117c8780468c74ebff9",
+    "addon\\FreeDrawingMCP\\fd_drawing\\drawing_evidence.py": "8c55afd3accebe91feeddca4319fd2d7dbf2bb775d4e2c7adb0a15d581b5cf70",
+    "addon\\FreeDrawingMCP\\fd_drawing\\features.py": "51f151815929322c7fd94372ba93c04fa80d155ffac46f52d019e33b3a56db2b",
+    "addon\\FreeDrawingMCP\\fd_drawing\\geometry.py": "fc68ba86583de5a786937f41eba5874278727de67adae3ba2014b0a44f87a228",
+    "addon\\FreeDrawingMCP\\fd_drawing\\importer.py": "9d5934f6edec72c66ee38a1718e9c9deedec96feac3201a11362a20152ffd778",
+    "addon\\FreeDrawingMCP\\fd_drawing\\layout_policy.py": "b6c49f59c4cb6f946aebc0a47bc94309409c1f03a1adf3a31fc9abf54836b54f",
+    "addon\\FreeDrawingMCP\\fd_drawing\\ops.py": "e0d6a0f30151a9a7a8c4c292db05193690b6dbca9abc0ad475144e2463af3257",
+    "addon\\FreeDrawingMCP\\fd_drawing\\page.py": "ed3e7ec103a5783c5ff2b8f6477ba87e7e5bcc1edbb6318decfd4a73ba8f2687",
+    "addon\\FreeDrawingMCP\\fd_drawing\\paper_geometry.py": "ca6d8db2f58d85a4ec4e26ada169ba59724273dfc70f77844785d085c99daf48",
+    "addon\\FreeDrawingMCP\\fd_drawing\\planner.py": "e6f6858a579f0fe43bcfee627d97ca195a97de0298b982a8e63418d00be979ac",
+    "addon\\FreeDrawingMCP\\fd_drawing\\progress.py": "005dbbb7d6e3124e8d6e21e9e5a9a9a0ea503205ac19dde4bea5d2133dc96b4f",
+    "addon\\FreeDrawingMCP\\fd_drawing\\projection_check.py": "9b9c4728cf384a1d46d6f5ddf9f5a4425bdc8400e53df0523f7a59b8c4e8f42e",
+    "addon\\FreeDrawingMCP\\fd_drawing\\rebuild_worker.py": "8ec4f3e0e00075416a8589786d17028ab86efb5bdf9e8c569f78cb603d0e001b",
+    "addon\\FreeDrawingMCP\\fd_drawing\\reflow.py": "dee33401621ddc3abe267f893716a5d8693a5490f2e11df19919ed3ae91d71a8",
+    "addon\\FreeDrawingMCP\\fd_drawing\\render.py": "bbeb92844c457b349d27a08201d6e33fccc1de97774fbb390c3837ef6db38eca",
+    "addon\\FreeDrawingMCP\\fd_drawing\\runner.py": "86959d5cbdd65c523ba9b860bef9fe052bc2ea0a990bd20a226f087748e7de27",
+    "addon\\FreeDrawingMCP\\fd_drawing\\sections.py": "2b54d3d242c21a8583a74481d1adbe8a256ba938930d6c92bf564f6325404426",
+    "addon\\FreeDrawingMCP\\fd_drawing\\shaded.py": "748fefb76e6fdb297037572ce0ca685fabf5e5daa3d1d7c2e67ff250e1d4ebc9",
+    "addon\\FreeDrawingMCP\\fd_drawing\\sheetmetal.py": "21c760b9e8b63aa85fc0b21bec8a2314bb6674be4fe94b533a05b1a04a60bf75",
+    "addon\\FreeDrawingMCP\\fd_drawing\\snapshot.py": "e45a03a60bca162bd881ebec93b7a6803c768f2d383843103f3730213dc7e2a3",
+    "addon\\FreeDrawingMCP\\fd_drawing\\standards.py": "0341b08c78da609dc0c816fcfaca45d4967797b2960ce3911d147ce21d424551",
+    "addon\\FreeDrawingMCP\\fd_drawing\\templates.py": "24d45d404172453e4aa413e577d202761d8be3cbc68eda36ceb0cc39ac3c62d5",
+    "addon\\FreeDrawingMCP\\fd_drawing\\textfmt.py": "e790b398aeb2537a654a75d4c1e7e91e42a6162297f15a4c3a3fc81c495bf4e7",
+    "addon\\FreeDrawingMCP\\fd_drawing\\threads.py": "c8b6a8b8396fda5db08b796cd28a0cc0fc72868d9b78875648f8f536d4b2443b",
+    "addon\\FreeDrawingMCP\\Init.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "addon\\FreeDrawingMCP\\InitGui.py": "cad3f93a837206cc8dda849515305628bfc44e37dde7d9361ea6f6a55cc80fb1",
+    "addon\\FreeDrawingMCP\\rpc_server\\__init__.py": "7591149426074e9372af40b5a14305102246a4a7aff2defd1b11b75a8cfb3ed2",
+    "addon\\FreeDrawingMCP\\rpc_server\\gui_dispatch.py": "94b066007f3d5c3581c68e01da7dc6c59b2ee09f78a62f1b83e05bcda4c7d9a6",
+    "addon\\FreeDrawingMCP\\rpc_server\\server.py": "892407feb60dbb4fe18bf6bba720fcc9048567aab59153f44cd7541ac8855bab",
+    "addon\\FreeDrawingMCP\\rpc_server\\settings.py": "73b32fb0fd6e536fe79017e10cb257805b0a1d0574ba0ce05f1c93dfe6e51910"
+  }
+}

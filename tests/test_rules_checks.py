@@ -282,11 +282,11 @@ def test_e1_missing_overall_size(snap):
     assert "along X (80 mm)" in fs[0].message
 
 
-def test_e1_thickness_note_counts_as_overall_size(snap):
+def test_e1_thickness_note_cannot_replace_a_dimensioned_edge_view(snap):
     snap["dimensions"] = [d for d in snap["dimensions"] if d["name"] != "DimZ"]
     assert statuses(snap, "E.1") == {"fail"}
     snap["annotations"].append({"name": "Thickness", "kind": "note", "text": ["t10"], "bbox": [60.0, 150.0, 66.0, 155.0]})
-    assert statuses(snap, "E.1") == {"pass"}
+    assert statuses(snap, "E.1") == {"fail"}
 
 
 def test_e1_circle_without_size_auto_dimension(snap):
@@ -369,10 +369,42 @@ def test_e8_real_l_bracket_callouts_in_two_views_pass():
 def test_e8_identical_holes_without_multiplicity(snap):
     view(snap, "Front")["circles"].append(circle("Edge6", (80.0, 180.0)))
     f = only(snap, "E.8")[0]
-    assert f.status == "fail" and f.auto and "2 identical holes" in f.message
-    assert f.fix == [{"op": "set_dimension", "name": "DimD", "format_spec": "2× ⌀%.2w THRU"}]
+    assert f.status == "fail" and not f.auto and "2 equal-diameter circles" in f.message
+    assert f.fix is None
     dim(snap, "DimD")["text"] = "2× ⌀12 THRU"
     assert statuses(snap, "E.8") == {"pass"}
+
+
+def test_same_diameter_but_different_depths_are_not_merged(snap):
+    view(snap,'Front')['circles'].append(circle('Edge6',(80,180)))
+    second=_second_hole_callout(snap,'Front')
+    second.update(text='⌀12 ↧10',format_spec='⌀%.2w ↧10',refs=['Edge6'])
+    assert statuses(snap,'E.8')=={'pass'}
+
+
+def test_distinct_hole_callouts_on_opposite_views_cover_matching_circle_axes(snap):
+    extra = circle('Edge6', (80, 180))
+    extra['axis_identity'] = ['Projection', 'Z', [20, 0]]
+    view(snap, 'Front')['circles'].append(extra)
+    opposite = circle('Edge8', (120, 80))
+    opposite['axis_identity'] = ['Projection', 'Z', [20, 0]]
+    view(snap, 'Top')['circles'] = [opposite]
+    second = _second_hole_callout(snap, 'Top')
+    second.update(text='⌀12 ↧10', format_spec='⌀%.2w ↧10', refs=['Edge8'])
+    assert statuses(snap, 'E.8') == {'pass'}
+    # Equal diameter elsewhere does not cover the unannotated circle.
+    opposite['axis_identity'] = ['Projection', 'Z', [30, 0]]
+    assert 'fail' in statuses(snap, 'E.8')
+    opposite['axis_identity'] = ['OtherPart', 'Z', [20, 0]]
+    assert 'fail' in statuses(snap, 'E.8')
+
+
+def test_chamfer_derived_rim_is_reviewed_instead_of_automatically_redimensioned(snap):
+    view(snap,'Front')['circles'].append(circle('Edge6',(100,180),5.5))
+    snap['dimensions'].append(dict(dim(snap,'DimX'),name='Chamfer',value=.5,text='C0.5',role='chamfer'))
+    findings=only(snap,'E.1')
+    assert any(f.status=='review' and 'derived' in f.message for f in findings)
+    assert not any(f.fix for f in findings)
 
 
 # ---------------------------------------------------------------------- E.9
@@ -452,6 +484,14 @@ def test_e10_crossing_dimension_lines_warn(snap):
     assert "warn" in statuses(snap, "E.10")
 
 
+def test_e10_checks_the_whole_angular_arc_not_only_its_first_segment(snap):
+    angle = dict(dim(snap, 'DimD'), name='Angle', type='Angle', text='90°',
+                 text_box=[150, 240, 160, 245], lines=[[10, 10, 20, 10]],
+                 dimension_lines=[[10, 10, 20, 10], [100, 195, 100, 215]])
+    snap['dimensions'].append(angle)
+    assert any('lines cross' in f.message for f in only(snap, 'E.10'))
+
+
 # --------------------------------------------------------------------- E.11
 def test_e11_pass(snap):
     assert statuses(snap, "E.11") == {"pass"}
@@ -502,6 +542,16 @@ def test_n3_vague_deburr_warns(snap):
     notes = snap["annotations"][0]["text"]
     notes[notes.index("BREAK ALL SHARP EDGES 0.2-0.5")] = "DEBURR"
     assert statuses(snap, "N.3") == {"warn"}
+
+
+def test_sheet_thickness_requires_a_view_dimension_and_never_autofixes_to_a_note(snap):
+    snap['meta'].update(part_kind='sheet',sheet={'t':1.5,'inside_radii':[2]})
+    snap['annotations'].append({'name':'Thickness','kind':'note','text':['t1.5'],'bbox':[60,150,70,155]})
+    snap['dimensions'].append(dict(dim(snap,'DimD'),name='BendRadius',type='Radius',value=2,text='R2'))
+    finding=only(snap,'O.1')[0]
+    assert finding.status=='fail' and not finding.auto and not finding.fix
+    snap['dimensions'].append(dict(dim(snap,'DimZ'),name='Wall',value=1.5,text='1.5',role='baseline:Z:thickness'))
+    assert statuses(snap,'O.1')=={'pass'}
 
 
 # ---------------------------------------------------------------------- P.1

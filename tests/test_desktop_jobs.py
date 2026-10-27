@@ -64,6 +64,7 @@ def fake_engine(monkeypatch):
         return engine
 
     monkeypatch.setattr(jobs, "HeadlessBackend", make_engine)
+    monkeypatch.setattr(jobs, 'verify_definition', lambda *args, **kwargs: {'status':'unsupported','attempts':[]})
     return engine
 
 
@@ -196,7 +197,7 @@ def test_layout_fix_is_bounded_and_uses_only_safe_rule_actions(source, fake_engi
     result = jobs.create_drawing(jobs.DrawingOptions(source))
     assert not result.integrity_errors
     assert sum(step["op"] == "apply_actions" for call in fake_engine.calls for step in call) == 2
-    assert fake_engine.reopens == 3
+    assert fake_engine.reopens == 4  # includes the saved result after definition verification
 
 
 def test_cancel_before_start_creates_no_output(source, fake_engine):

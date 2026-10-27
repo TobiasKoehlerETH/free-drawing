@@ -6,9 +6,9 @@ bend is a pair of coaxial partial cylinders with radii ``R`` and ``R + t``.
 
 Drawing convention:
 
-* thickness stated once (``t1.5``), not as a dimension per wall;
+* thickness dimensioned once between two visible wall faces;
 * face positions measured to the OUTSIDE faces only - inner faces follow
-  from ``t``;
+  from the wall-thickness dimension;
 * bends called out by their INSIDE radius (``4× R2``), never the outer one.
 """
 
@@ -117,4 +117,21 @@ def filter_requirements(reqs, shape, sheet):
             removed.append(r)
             continue
         keep.append(r)
+    planes = _planes(shape)
+    pairs = []
+    for a in planes:
+        axis = next((name for index, name in enumerate('XYZ') if abs(a['n'][index]) > .9999), None)
+        if axis is None:
+            continue
+        for b in planes:
+            if a['n'].dot(b['n']) > -.9999:
+                continue
+            gap = (b['c'] - a['c']).dot(a['n'])
+            if abs(gap + t) < 1e-3:
+                values = sorted((getattr(a['c'], axis.lower()), getattr(b['c'], axis.lower())))
+                pairs.append((min(a['area'], b['area']), axis, values))
+    if pairs:
+        _, axis, (datum, coordinate) = max(pairs)
+        keep.append({'kind': 'loc', 'axis': axis, 'datum': datum, 'coord': coordinate,
+                     'source': 'thickness', 'center': False, 'prio': 4})
     return keep, removed

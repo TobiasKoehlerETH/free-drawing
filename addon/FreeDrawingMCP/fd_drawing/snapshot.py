@@ -15,7 +15,7 @@ import FreeCAD as App
 from . import geometry as G
 from . import templates
 from .standards import DIM_FONT_SIZE, LINE_THICK, LINE_THIN
-from .annotation_ink import caption_geometry, dimension_ink
+from .annotation_ink import caption_geometry, dimension_ink, dimension_lines
 from .textfmt import display_text
 
 SCHEMA_VERSION = 1
@@ -272,6 +272,7 @@ def _view_record(view, include_geometry):
     if rec.get("axis_line"):
         cosmetic.append({"tag": "half-section-axis", "kind": "centerline", "points": rec["axis_line"]})
     circles = []
+    source_center = _source_center(view) if kind == "ortho" and grp is not None else None
     for i, e in edges:
         if type(e.Curve).__name__ != "Circle":
             continue
@@ -292,6 +293,10 @@ def _view_record(view, include_geometry):
         circles.append({"edge": f"Edge{i}", "center": [r2(cp[0]), r2(cp[1])], "radius": r2(r),
                         "model_radius": r2(e.Curve.Radius), "full": bool(full),
                         "visible": bool(vis.get(i, True)), "center_mark": marked})
+        if source_center is not None and rec["axis"]:
+            model_point = _model_point(view, (c.x, c.y), source_center)
+            circles[-1]["axis_identity"] = [grp.Name, rec["axis"],
+                [round(value, 6) for index, value in enumerate(model_point) if "XYZ"[index] != rec["axis"]]]
     # OCC splits circles at seams: equal centre + radius covering 360 deg is full.
     groups = {}
     for (i, e), c in zip([ie for ie in edges if type(ie[1].Curve).__name__ == "Circle"], circles):
@@ -407,7 +412,8 @@ def dimension_signature(dim):
     view, subs = refs[0][0], list(refs[0][1])
     if not G.is_type(view, _VIEW_PART):
         return None
-    value = round(float(dim.getRawValue()), 3)
+    value = round(float(dim.getRawValue()), 6)
+    meaning=re.sub(r'%\.\d+w','%w',str(dim.FormatSpec)).replace('Ø','⌀')
     t = str(dim.Type)
     center = _source_center(view)
     pts = _ref_points_local(view, subs)
@@ -417,18 +423,22 @@ def dimension_signature(dim):
         if pts:
             c = pts[0]
             mx = _model_point(view, c, center)
-            key = tuple(round(v, 2) for v in mx)
+            key = tuple(round(v, 6) for v in mx)
             if axis:
                 key = tuple(v for i, v in enumerate(key) if "XYZ"[i] != axis)
-            return ("radial", t, value, axis, key)
-        return ("radial", t, value, axis)
+            direction=tuple(view.Direction) if ('↧' in meaning or '↓' in meaning) and 'THRU' not in meaning else None
+            return ("radial", t, value, axis, key,meaning,direction)
+        return ("radial", t, value, axis,meaning)
     if t in ("DistanceX", "DistanceY"):
         local_axis = "x" if t == "DistanceX" else "y"
         axis, sign = _model_axis_of(view, local_axis)
         if axis is None or len(pts) < 2:
             return ("linear", t, value, view.Name, tuple(subs))
-        vals = sorted(round(_model_coord(view, axis, sign, p, local_axis, center), 2) for p in pts[:2])
-        return ("linear", axis, value, tuple(vals))
+        vals = sorted(round(_model_coord(view, axis, sign, p, local_axis, center), 6) for p in pts[:2])
+        if '⌀' in meaning:
+            points=tuple(sorted(tuple(round(v,6) for v in _model_point(view,p,center)) for p in pts[:2]))
+            return ('profile_diameter',axis,value,points,meaning)
+        return ("linear", axis, value, tuple(vals),meaning)
     if t == "Angle" and len(pts) >= 3:
         endpoints = tuple(sorted(tuple(round(c, 4) for c in _model_point(view, p, center)) for p in pts))
         return ("angle", value, view.Name, endpoints)
@@ -496,6 +506,10 @@ def _dimension_record(dim):
                 lines.append([p2[0], p2[1], xl, p2[1]])
             else:
                 lines.append([p1[0], p1[1], p2[0], p2[1]])
+        elif t == "Angle":
+            points = [G.dim_internal_to_page(view, (p.x, p.y), origin) for p in dim.getAnglePoints()]
+            if len(points) == 3:
+                rec["angle_geometry"] = {"ends": [list(p) for p in points[:2]], "vertex": list(points[2])}
         elif t in ("Diameter", "Radius"):
             ap = dim.getArcPoints()
             center = G.dim_internal_to_page(view, (ap[0].x, ap[0].y), origin)
@@ -519,7 +533,8 @@ def _dimension_record(dim):
     rec["text_box"] = _text_box(cx, cy, text, vertical=vertical)
     rec["text_center"] = [r2(cx), r2(cy)]
     rec["ink_lines"] = dimension_ink(rec)
-    if t in ("Radius", "Diameter"):
+    rec["dimension_lines"] = dimension_lines(rec)
+    if t in ("Radius", "Diameter", "Angle"):
         rec["lines"] = rec["ink_lines"]
     rec["ref_hidden"] = _refs_hidden(view, subs)
     if t in ("DistanceX", "DistanceY"):

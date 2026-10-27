@@ -2,15 +2,42 @@
 import json
 import os
 import subprocess
+import re
 from pathlib import Path
 
 import pytest
 
 from conftest import ROOT
 from free_drawing_mcp.backends import HeadlessBackend, detect_freecadcmd
+from free_drawing_mcp.definition import verify_definition
 
 pytestmark = [pytest.mark.freecad, pytest.mark.skipif(
     detect_freecadcmd() is None, reason="FreeCADCmd is not installed")]
+
+
+@pytest.mark.parametrize('part,thickness', [('plate_hole_pattern',12),('flange',15),('slotted_plate',6),('large_frame',50),('sheet_tray',1.5)])
+def test_thickness_is_a_native_dimension_on_a_drawing_view(tmp_path,part,thickness):
+    output=tmp_path/(part+'.FCStd')
+    backend=HeadlessBackend(timeout=300)
+    backend.run([{'op':'create_drawing','args':{'source':str(ROOT/'samples/parts'/(part+'.step')),'output':str(output)}}])
+    snap=backend.run([{'op':'snapshot','args':{'doc':str(output)}}])[0]
+    standard={v['name']:v for v in snap['views'] if v['kind']=='ortho'}
+    assert len(standard)>=2
+    assert len({v['scale'] for v in standard.values()})==1
+    permitted=set(standard)
+    if part=='sheet_tray':permitted.update(v['name'] for v in snap['views'] if v['kind']=='section')
+    dims=[d for d in snap['dimensions'] if d['type'] in ('DistanceX','DistanceY')
+          and abs(d['value']-thickness)<1e-6 and d['view'] in permitted]
+    if part=='sheet_tray':dims=[d for d in dims if d.get('role','').endswith(':thickness')]
+    assert dims
+    assert all(d['refs'] and not d['ref_hidden'] for d in dims)
+    assert not any(re.fullmatch(r't\s*=?\s*\d+(?:\.\d+)?',line,re.I)
+                   for a in snap['annotations'] for line in a.get('text',[]))
+    assert any(v['kind']=='pictorial' and v['shaded'] for v in snap['views'])
+    if part!='sheet_tray':
+        report=verify_definition(backend,output,ROOT/'samples/parts'/(part+'.step'),tmp_path/'definition')
+        assert report['status']=='match_within_scope',report
+        assert report['source_unchanged']
 
 
 @pytest.mark.parametrize("part,folder", [("micro_grooves", "complex"), ("counterbored_block", "parts")])
@@ -127,3 +154,16 @@ def test_single_chamfer_callout_does_not_require_a_detail(tmp_path):
     assert any(d.get("role") == "chamfer" for d in snap["dimensions"])
     assert all(d["view"] in {v["name"] for v in snap["views"] if v["kind"] == "ortho"}
                for d in snap["dimensions"] if d.get("role") == "chamfer")
+
+
+def test_tiny_part_isometric_is_large_enough_to_recognize(tmp_path):
+    output=tmp_path/'tiny.FCStd'
+    snap=HeadlessBackend(timeout=120).run([
+        {'op':'create_drawing','args':{'source':str(ROOT/'samples/parts/tiny_pin.step'),'output':str(output)}},
+        {'op':'snapshot','args':{'doc':str(output)}},
+    ])[1]
+    iso=next(v for v in snap['views'] if v['kind']=='pictorial')
+    assert iso['shaded'] and snap['meta']['iso_readability_enlarged']
+    box=iso['bbox']
+    assert max(box[2]-box[0],box[3]-box[1])>=35
+    assert box[1]>=snap['sheet']['title_block'][3]

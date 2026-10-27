@@ -24,20 +24,20 @@ The [Swiss TPD/GPS policy](guidelines/16-swiss-tpd-gps.md) governs new drawings.
 
 Start with the [STEP-to-reviewed-drawing workflow](docs/step-to-reviewed-drawing.md). Agents can use the reusable [FreeCAD Swiss Drawings skill](skills/freecad-swiss-drawings/SKILL.md). Implementation findings and limitations are recorded in [engineering learnings](docs/freecad-drawing-learnings.md).
 
-![plate_hole_pattern: A3 sheet, baseline dimensions, 4× ⌀12 THRU callout, shaded isometric](docs/images/hero_plate.png)
+![plate_hole_pattern: A3 sheet, 12 mm thickness dimension on an edge view, baseline dimensions and shaded isometric](docs/images/hero_plate.png)
 
 ## Gallery
 
 | | | |
 |:-:|:-:|:-:|
 | ![Flange with PCD bolt circle](docs/images/flange.png) | ![Plate with boss and bore](docs/images/boss_plate.png) | ![Tube, turned part](docs/images/tube.png) |
-| **Flange**: `6× ⌀9 THRU EQ SP` on a ⌀90 pitch circle, `t15` note, single view | **Boss plate**: ⌀30 boss and `⌀16 THRU` bore, located from the datum edges; elevation and plan | **Tube**: end view plus profile with the axis horizontal, ⌀50 on the profile, `⌀40 THRU` on the circle |
-| ![Bent sheet-metal channel](docs/images/sheet_metal.png) | ![Threaded shaft](docs/images/threaded_shaft.png) | ![Inspection highlights](docs/images/inspection.png) |
-| **Sheet metal**: profile + plan view, grouped `2× R2` / `2× R4` bend radii | **Threaded shaft**: turned part with a thread callout | **Inspection**: findings boxed in red (fail) and orange (warn) |
+| **Flange**: `6× ⌀9 THRU EQ SP` on a ⌀90 pitch circle, with 15 mm thickness dimensioned on an edge view | **Boss plate**: ⌀30 boss and `⌀16 THRU` bore, located from the datum edges; elevation and plan | **Tube**: end view plus profile with the axis horizontal, ⌀50 on the profile, `⌀40 THRU` on the circle |
+| ![Bent sheet-metal tray](docs/images/sheet_metal.png) | ![Threaded shaft](docs/images/threaded_shaft.png) | ![Inspection highlights](docs/images/inspection.png) |
+| **Sheet metal**: standard views and a section with a 1.5 mm wall-thickness dimension | **Threaded shaft**: turned part with a thread callout | **Inspection**: findings boxed in red (fail) and orange (warn) |
 | ![Shaded isometric close-up](docs/images/iso_render.png) | ![Dimension style close-up](docs/images/dimension_style.png) | |
 | **Isometric**: software-rendered, shaded with edges, 1 : 2 | **Dimension style**: thin lines, slim filled arrows, 3.5 mm text | |
 
-All images come from `samples/run_samples.py` on the bundled sample parts. Nothing was retouched.
+Images are direct exports of the bundled sample parts. The plate, flange and tray examples come from the [reconstruction audit](docs/drawing-reconstruction-validation-2026-10-27.md); older examples come from `samples/run_samples.py`.
 
 ## Features
 
@@ -49,7 +49,7 @@ All images come from `samples/run_samples.py` on the bundled sample parts. Nothi
 
 **Automatic view selection**
 - The tool tries 6 front directions with 4 view sets (`Front`, `Front+Top`, `Front+Right`, `Front+Top+Right`). It keeps the **smallest view set that shows every feature characteristically**: holes where they appear as circles, faces where they are seen edge-on.
-- Plates can use one view plus a thickness note. Turned parts are drawn with the axis horizontal and diameters on the profile. Explicit `views` requests can override automatic selection.
+- Plates use a main view and a dimensioned edge view for thickness. Turned parts are drawn with the axis horizontal and diameters on the profile. Explicit `views` requests can override automatic selection.
 - If a feature still can't be dimensioned, or would be dimensioned on a hidden line, the tool adds a view. Views that carry no unique dimension are removed.
 - `dimensioned_only=True` is the default. Standard, section and detail views must carry dimensions. The coloured isometric is always retained as a recognition view at the bottom right, without dimensions. Undimensioned projection anchors remain hidden in the document so dependent dimensions stay valid.
 - `section_cut_only=True` builds full sections from the exact material faces in the cutting plane. This removes projected geometry behind the cut. Existing full sections can be converted with a `set_view` action using `cut_only=True`.
@@ -59,18 +59,27 @@ All images come from `samples/run_samples.py` on the bundled sample parts. Nothi
 - Positions are measured from datum planes as **baseline/ordinate stacks**: first line 10 mm from the outline, then 8 mm spacing, shortest dimension nearest the part.
 - **Hole callouts** include multiplicity, through or depth, counterbore and countersink: `4× ⌀12 THRU`, `2× ⌀6.6 THRU ⌴⌀11 ↧6.8`, `⌵⌀12×90°`.
 - **Bolt circles**: `6× ⌀9 THRU EQ SP`, plus a dash-dot ⌀ pitch circle.
-- **Radii** are grouped (`4× R5`) and slot ends are located. Also covered: **chamfers** (`2× C1.5`), **angles** of inclined faces, spheres (`SR`), and **`t` notes** for plates.
+- **Radii** are grouped (`4× R5`) and slot ends are located. Also covered: **chamfers** (`2× C1.5`), **angles** of inclined faces, spheres (`SR`), and native thickness dimensions on plate edge views.
 - **Threads** get a callout when the thread is modelled. A plain tap-drill hole is reported for review (see [Limitations](#limitations)).
 - Each requirement is placed **once**, on visible geometry where any view offers it. A final dedupe pass removes repeated dimensions. Anything the tool could not place is reported, never silently dropped.
-- Dimensions use 0.35 mm lines, 3 mm filled arrows and 3.5 mm `osifont` text in paper units. Layout never shrinks the text to fit. Collision checks include exported line extensions, radial shoulders and captions.
+- Dimensions use 0.35 mm lines, 3 mm filled arrows and 3.5 mm `osifont` text in paper units. Layout never shrinks the text to fit. Collision checks include exported line extensions, angular arcs, radial shoulders and captions.
 - Standard views carry the main dimensions. Strict automatic output uses at most one section for hidden/unplaced requirements and one detail for genuinely small features; undimensioned extras are hidden.
+- Plate thickness uses a native dimension on an edge view at the shared standard-view scale. Sheet-metal wall thickness is dimensioned between actual wall faces, using a section when needed. A `t12` note cannot replace that dimension or view.
 - See the [reference-project and dataset review](docs/drawing-reference-review-2026-10-26.md) for source comparisons, adopted approaches and the repeatable paired-STEP evaluation.
+
+**Independent reconstruction check**
+- Desktop creation, MCP `create_drawing`, and CLI `make` now run a bounded drawing-only reconstruction check for STEP inputs. It reads published dimensions, notes and drawn 2D geometry in a separate FreeCAD worker, exports a new STEP, and compares it with the original. Up to two visible repairs can add missing facts; the source STEP remains unchanged.
+- It currently supports extruded rectangular/circular profiles, holes/counterbores, rectangular openings, slots, and dimensioned revolved profiles. Bends, assemblies, general blends and multi-axis definitions remain explicitly unverified rather than receiving a false pass.
+- The default numerical comparison tolerance is 0.00001 mm. This is a verification precision, not a manufacturing tolerance. Checks include reprojection, solid validity/count, Boolean material differences, volume, bounds and sampled surface deviations.
+- Each attempt keeps `drawing.json`, reconstructed FCStd/STEP files, comparison evidence and `verification.json`. Missing or unsupported facts are reported separately from layout findings. Native drawing evidence is supported; this is not a general scanned-PDF reconstruction tool.
+- Audit an existing drawing with `verify_drawing_definition(doc, source, output_dir, max_repairs=0)`. Set `max_repairs=2` to allow visible repairs. CLI equivalent: `uv run python -m free_drawing_mcp.definition --drawing drawing.FCStd --source input.step --out verification`. Use `--max-repairs 0` for read-only work.
+- See [the reconstruction design](docs/drawing-reconstruction-design.md) for the data boundary, supported scope and limitations. Automatic numeric labels retain up to six decimal places when needed, with trailing zeros removed.
 
 **A complete sheet**
 - ISO 5457 template (A4-A0) with a filled title block: title, scale, revision `A`, sheet `1 / 1`, date and the general tolerance.
 - Default notes: `UNITS: mm` and `TOLERANCING PRINCIPLE: ISO 8015`. Tolerance values, material, surface finish and edge allowances require explicit design input. Legacy `ISO 2768-mK` is flagged for review.
 - ISO 128 line weights: 0.7 mm visible, 0.35 mm hidden lines (always shown on orthographic views), and dash-dot centre lines on every cylinder.
-- **Colour isometric** in the bottom-right zone at 1 : 2, including with `dimensioned_only=True`. It uses true B-rep normals, Phong shading, three-point lighting, supersampling and a contact shadow, with the edges drawn on top. Layout reserves its space above the title block.
+- **Colour isometric** in the bottom-right zone, including with `dimensioned_only=True`. It normally uses 1 : 2, enlarges tiny parts for recognition, and reduces large parts to fit. It uses true B-rep normals, Phong shading, three-point lighting, supersampling and a contact shadow, with the edges drawn on top. Layout reserves its space above the title block.
 
 **Inspection and fixes**
 - Covers **every [CHECKLIST](guidelines/CHECKLIST.md) item A.1-P.5** in about 20 ms of pure Python on a JSON snapshot. FreeCAD isn't needed for this step.

@@ -11,6 +11,7 @@ geometry (:class:`ViewGeom`) and places the planned dimensions:
 """
 
 import math
+import re
 
 import FreeCAD as App
 
@@ -200,7 +201,7 @@ def make_dimension(doc, page, view, dim_type, refs, format_spec=None, x=None, y=
     page.addView(dim)
     dim.ShowUnits = False  # units are declared once on the sheet [00][P.1]
     if format_spec:
-        dim.FormatSpec = format_spec
+        dim.FormatSpec = re.sub(r'%\.\d+w','%.6w',format_spec) if role else format_spec
     if x is not None:
         dim.X = x
     if y is not None:

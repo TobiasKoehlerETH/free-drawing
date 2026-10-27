@@ -35,6 +35,7 @@ Orthographic projection turns a 3D part into 2D views that can be dimensioned an
 
 ## Project note for `auto-drawing`
 
+- Plates require an edge view with a native thickness dimension at the same scale as the main view. A thickness note such as `t12` is not a substitute under this project's drawing policy.
 - Keep orthographic views line-based with hidden lines visible.
 - Keep the small isometric recognition view as the only shaded / colored view.
 - Do not show hidden-line presentation on the isometric recognition view unless a special case requires it.

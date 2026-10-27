@@ -198,7 +198,11 @@ def test_real_fixture_expected_findings(name):
     rep = inspect(load_fixture(name))
     k1 = [f for f in rep.findings if f.rule == "K.1"]
     assert [f.status for f in k1] == ["fail"]  # generated drawings leave the material to the user
-    assert not [f for f in rep.findings if f.rule in ("E.1", "E.11", "A.8", "C.2", "C.6", "C.7", "P.5")
+    # This historical flange fixture has only t15, without an edge dimension.
+    if name == 'flange':
+        assert any(f.rule=='E.1' and f.status=='fail' and 'along Z (15 mm)' in f.message for f in rep.findings)
+    checked = ("E.11", "A.8", "C.2", "C.6", "C.7", "P.5") + (() if name=='flange' else ('E.1',))
+    assert not [f for f in rep.findings if f.rule in checked
                 and f.status == "fail"]
     assert rep.sheet == "A3 landscape · first-angle · 1 : 1 · manufacturing"
 
@@ -208,4 +212,4 @@ def test_real_fixture_material_set_passes_k1():
     snap["title_block"]["part_material"] = "EN AW-6082 T6"
     rep = inspect(snap)
     assert all(f.status == "pass" for f in rep.findings if f.rule == "K.1")
-    assert rep.result() == "WARN"  # legacy mK tolerances remain visible for review
+    assert rep.result() == "FAIL"  # Material does not fix the missing thickness view.

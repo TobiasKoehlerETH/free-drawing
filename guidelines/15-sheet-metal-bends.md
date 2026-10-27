@@ -14,6 +14,8 @@ confidence: medium
 
 ## Common bend callouts
 
+Project policy: show wall thickness with a dimension between the actual wall faces on a standard view or section. Do not replace this dimension with a standalone `t` note.
+
 ```text
 UP 90° R2
 DN 135° R1.5

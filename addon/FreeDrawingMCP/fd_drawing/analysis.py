@@ -46,7 +46,7 @@ def cylinders(shape):
         radial = p - foot
         internal = n.dot(radial) < 0
         ts = [(App.Vector(vx.Point) - c).dot(a) for vx in face.Vertexes] or [0.0]
-        fb = face.BoundBox
+        fb = G.exact_bbox(face)
         if axis:
             lo = getattr(fb, axis + "Min"); hi = getattr(fb, axis + "Max")
             slo = getattr(bb, axis + "Min"); shi = getattr(bb, axis + "Max")
@@ -71,7 +71,8 @@ def cylinders(shape):
         ax = cyl["axis"] or "?"
         c = cyl["center"]
         idx = {"X": (1, 2), "Y": (0, 2), "Z": (0, 1)}.get(ax, (0, 1))
-        key = (ax, round(cyl["radius"], 3), round(c[idx[0]], 2), round(c[idx[1]], 2), cyl["internal"])
+        key = (ax, round(cyl["radius"], 6), round(c[idx[0]], 6), round(c[idx[1]], 6), cyl["internal"],
+               tuple(round(value,6) for value in cyl['extent']))
         if key in merged:
             m = merged[key]
             m["span"] = m.get("span", 0.0) + cyl.get("span", 0.0)

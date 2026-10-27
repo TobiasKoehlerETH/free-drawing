@@ -149,6 +149,26 @@ OPS = {
 }
 
 
+def op_definition_evidence(doc, path, frame_path, page="auto"):
+    from .drawing_evidence import export_evidence
+    document = resolve_doc(doc)
+    return export_evidence(document, find_page(document, page), path, frame_path)
+
+
+def op_compare_definition(source, rebuilt, frame_path, tolerance=1e-5):
+    from .definition_compare import compare
+    return compare(source, rebuilt, frame_path, tolerance)
+
+
+def op_repair_definition(doc, gaps, page="auto"):
+    from .definition_repair import repair
+    document=resolve_doc(doc)
+    return repair(document,find_page(document,page),gaps)
+
+
+OPS.update(definition_evidence=op_definition_evidence, compare_definition=op_compare_definition, repair_definition=op_repair_definition)
+
+
 def run(op, args=None):
     fn = OPS.get(op)
     if fn is None:

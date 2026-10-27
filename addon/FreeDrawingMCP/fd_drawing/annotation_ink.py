@@ -2,10 +2,44 @@
 import math
 
 
+def angular_ink(record):
+    """Return the measured minor arc and its witness extensions in page mm."""
+    geometry = record.get("angle_geometry")
+    if not geometry:
+        return [], []
+    vertex, ends = geometry["vertex"], geometry["ends"]
+    start, finish = [math.atan2(p[1] - vertex[1], p[0] - vertex[0]) for p in ends]
+    sweep = (finish - start + math.pi) % (2 * math.pi) - math.pi
+    center, box = record["text_center"], record["text_box"]
+    middle = start + sweep / 2
+    opposite = ((center[0] - vertex[0]) * math.cos(middle)
+                + (center[1] - vertex[1]) * math.sin(middle)) < 0
+    if opposite:
+        start += math.pi
+    clearance = math.hypot(box[2] - box[0], box[3] - box[1]) / 2 + 1
+    radius = max(4, math.dist(center, vertex) - clearance)
+    count = max(8, math.ceil(abs(sweep) * radius / 1.5))
+    points = [[vertex[0] + radius * math.cos(start + sweep * i / count),
+               vertex[1] + radius * math.sin(start + sweep * i / count)] for i in range(count + 1)]
+    extensions = []
+    for end, angle in zip(ends, (start, start + sweep)):
+        distance = math.dist(end, vertex) * (-1 if opposite else 1)
+        if abs(radius - distance) <= 1.2:
+            continue
+        sign = 1 if radius > distance else -1
+        a, b = distance + sign, radius + sign * 2
+        extensions.append([vertex[0] + a * math.cos(angle), vertex[1] + a * math.sin(angle),
+                           vertex[0] + b * math.cos(angle), vertex[1] + b * math.sin(angle)])
+    return points, extensions
+
+
 def dimension_ink(record):
     lines = record.get("lines", [])
     box, center = record.get("text_box"), record.get("text_center")
     kind = record.get("type")
+    if kind == "Angle" and record.get("angle_geometry"):
+        points, extensions = angular_ink(record)
+        return [a + b for a, b in zip(points, points[1:])] + extensions
     if kind in ("DistanceX", "DistanceY") and len(lines) >= 3 and center:
         k = 0 if kind == "DistanceX" else 1
         other = 1 - k
@@ -43,6 +77,15 @@ def dimension_ink(record):
     return lines
 
 
+def dimension_lines(record):
+    """The dimension arc/leader itself, excluding witness extension lines."""
+    if record.get("angle_geometry"):
+        points, _ = angular_ink(record)
+        return [a + b for a, b in zip(points, points[1:])]
+    ink = record.get("ink_lines", record.get("lines", []))
+    return ink if record.get("type") in ("Diameter", "Radius") else ink[:1]
+
+
 def shifted_dimension(record, dx, dy):
     result = dict(record)
     x, y = record["text_center"]
@@ -62,6 +105,7 @@ def shifted_dimension(record, dx, dy):
         lines[2][2] += dx
     result["lines"] = lines
     result["ink_lines"] = dimension_ink(result)
+    result["dimension_lines"] = dimension_lines(result)
     return result
 
 
@@ -75,9 +119,11 @@ def strokes_conflict(a, b, tolerance=0.2):
     if abs(determinant) > 1e-8:
         t = cross(cx - ax, cy - ay, *v) / determinant
         s = cross(cx - ax, cy - ay, *u) / determinant
-        return 1e-5 < t < 1 - 1e-5 and 1e-5 < s < 1 - 1e-5
+        if 1e-5 < t < 1 - 1e-5 and 1e-5 < s < 1 - 1e-5:
+            return True
     length = math.hypot(*u)
-    if length < tolerance or abs(cross(cx - ax, cy - ay, *u)) / length > tolerance:
+    if length < tolerance or any(abs(cross(x - ax, y - ay, *u)) / length > tolerance
+                                 for x, y in ((cx, cy), (dx, dy))):
         return False
     projections = sorted(((cx - ax) * u[0] / length + (cy - ay) * u[1] / length,
                           (dx - ax) * u[0] / length + (dy - ay) * u[1] / length))

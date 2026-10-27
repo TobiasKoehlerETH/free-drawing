@@ -44,7 +44,7 @@ def _coord(p, axis):
     return {"X": p[0], "Y": p[1], "Z": p[2]}[axis]
 
 
-def _r(v, n=3):
+def _r(v, n=6):
     return round(float(v), n)
 
 
@@ -68,7 +68,7 @@ def hole_stacks(shape, cyls):
         if not c["internal"] or not c["axis"]:
             continue
         i = "XYZ".index(c["axis"])
-        key = (c["axis"],) + tuple(_r(c["center"][k], 2) for k in range(3) if k != i)
+        key = (c["axis"],) + tuple(_r(c["center"][k], 6) for k in range(3) if k != i)
         lines[key].append(c)
     cones = []
     for f in shape.Faces:
@@ -77,46 +77,89 @@ def hole_stacks(shape, cyls):
             if ax:
                 cones.append((ax, f))
     out = []
-    for key, segs in lines.items():
+    connected=[]
+    for key, candidates in lines.items():
+        clusters=[]
+        for cylinder in sorted(candidates,key=lambda c:c['extent'][0]):
+            if not clusters or cylinder['extent'][0]>max(c['extent'][1] for c in clusters[-1])+1e-6:
+                clusters.append([cylinder])
+            else:clusters[-1].append(cylinder)
+        connected.extend((key,cluster) for cluster in clusters)
+    for key, segs in connected:
         axis = key[0]
         i = "XYZ".index(axis)
         segs.sort(key=lambda c: c["radius"])
-        main = segs[0]
-        if not main["full"]:
+        main = next((segment for segment in segs if segment['full'] and abs(segment['radius']-segs[0]['radius'])<1e-6),None)
+        if main is None:
             continue
         lo = min(s["extent"][0] for s in segs)
         hi = max(s["extent"][1] for s in segs)
         c = list(main["center"])
-        eps = 0.05
-        below = list(c); below[i] = lo - eps
-        above = list(c); above[i] = hi + eps
-        through = not _inside(shape, below) and not _inside(shape, above)
         cbore = None
+        cbore_extent = None
         for s in segs[1:]:
             if s["full"] and s["radius"] > main["radius"] + TOL:
                 cbore = (2 * s["radius"], s["extent"][1] - s["extent"][0])
+                cbore_extent = tuple(s['extent'])
                 break
         csk = None
+        countersinks=[]
         for ax, f in cones:
             if ax != axis:
                 continue
             apex = f.Surface.Apex
             on_line = all(abs(_coord((apex.x, apex.y, apex.z), "XYZ"[k]) - c[k]) < 1e-2 for k in range(3) if k != i)
             if on_line:
+                u0,u1,v0,v1=f.ParameterRange
+                point=f.valueAt((u0+u1)/2,(v0+v1)/2)
+                vector=App.Vector(f.Surface.Axis);vector.normalize()
+                radial=(point-apex)-vector*(point-apex).dot(vector)
+                if f.normalAt((u0+u1)/2,(v0+v1)/2).dot(radial)>=0:continue
+                circles=[e.Curve for e in f.Edges if type(e.Curve).__name__=='Circle']
+                if not any(abs(circle.Radius-segment['radius'])<1e-6 and
+                           any(abs(_coord(tuple(circle.Center),axis)-end)<1e-6 for end in segment['extent'])
+                           for circle in circles for segment in segs):continue
                 j, k = [x for x in range(3) if x != i]
-                fb = f.BoundBox
+                fb = exact_bbox(f)
                 spans = (fb.XLength, fb.YLength, fb.ZLength)
                 d_big = max(spans[j], spans[k])
-                csk = (d_big, abs(2 * math.degrees(f.Surface.SemiAngle)))
-                break
-        depth = main["extent"][1] - main["extent"][0]
+                lo=min(lo,getattr(fb,axis+'Min'));hi=max(hi,getattr(fb,axis+'Max'))
+                small=min(circles,key=lambda e:e.Radius);large=max(circles,key=lambda e:e.Radius)
+                small_coordinate=_coord(tuple(small.Center),axis);large_coordinate=_coord(tuple(large.Center),axis)
+                sign=1 if large_coordinate>small_coordinate else -1
+                if any(abs(small.Radius-segment['radius'])<1e-6 for segment in segs) and opens_to_exterior(shape,axis,c,large_coordinate,sign):
+                    countersinks.append((d_big,abs(2*math.degrees(f.Surface.SemiAngle)),sign))
+        if countersinks:csk=countersinks[0][:2]
+        both=bool(len({cs[2] for cs in countersinks})==2 and all(abs(cs[0]-csk[0])<1e-6 and abs(cs[1]-csk[1])<1e-6 for cs in countersinks))
+        low_open=opens_to_exterior(shape,axis,c,lo,-1)
+        high_open=opens_to_exterior(shape,axis,c,hi,1)
+        through=low_open and high_open
+        depth = hi - lo
         out.append({"axis": axis, "center": tuple(c), "dia": 2 * main["radius"], "through": through,
-                    "depth": depth, "cbore": cbore, "csk": csk, "extent": (lo, hi)})
+                    "depth": depth, "cbore": cbore, "cbore_extent": cbore_extent, "csk": csk, "extent": (lo, hi),
+                    'csk_both_ends':both,
+                    'entry_end':hi if high_open and not low_open else lo if low_open and not high_open else None})
     return out
 
 
+def opens_to_exterior(shape,axis,center,coordinate,sign):
+    """An internal intersecting void is not proof that a drilled hole is THRU."""
+    bound=getattr(exact_bbox(shape),axis+('Max' if sign>0 else 'Min'))
+    if abs(coordinate-bound)<1e-6: return True
+    index='XYZ'.index(axis)
+    for face in shape.Faces:
+        if type(face.Surface).__name__!='Plane' or _axis_name(face.Surface.Axis)!=axis: continue
+        if abs(_coord(tuple(face.Surface.Position),axis)-coordinate)>1e-6: continue
+        u0,u1,v0,v1=face.ParameterRange
+        if face.normalAt((u0+u1)/2,(v0+v1)/2)[index]*sign<.99: continue
+        for edge in face.Edges:
+            if type(edge.Curve).__name__=='Circle' and all(abs(edge.Curve.Center[i]-center[i])<TOL for i in range(3) if i!=index):
+                return True
+    return False
+
+
 def _fmt(v):
-    return f"{v:.2f}".rstrip("0").rstrip(".")
+    return f"{v:.6f}".rstrip("0").rstrip(".")
 
 
 def hole_text(h, n):
@@ -126,6 +169,7 @@ def hole_text(h, n):
         t += f" ⌴⌀{_fmt(h['cbore'][0])} ↧{_fmt(h['cbore'][1])}"
     if h["csk"]:
         t += f" ⌵⌀{_fmt(h['csk'][0])}×{_fmt(h['csk'][1])}°"
+        if h.get('csk_both_ends'): t+=' BOTH SIDES'
     return t
 
 
@@ -160,12 +204,14 @@ def bolt_circles(groups):
 
 
 # -------------------------------------------------------------- faces
-def plane_positions(shape):
+def plane_positions(shape, holes=()):
     """Positions of planar faces normal to each axis: ``{axis: {coord: area}}``."""
     pos = {k: defaultdict(float) for k in "XYZ"}
     inclined = []
     for f in shape.Faces:
         if type(f.Surface).__name__ != "Plane":
+            continue
+        if hole_face_is_dimensioned(f,holes):
             continue
         n = App.Vector(f.Surface.Axis)
         ax = _axis_name(n)
@@ -175,6 +221,25 @@ def plane_positions(shape):
         else:
             inclined.append(f)
     return pos, inclined
+
+
+def hole_face_is_dimensioned(face,holes):
+    """Hole floors/ledges already located by a depth measured from an entry face."""
+    axis=_axis_name(App.Vector(face.Surface.Axis))
+    if not axis or not face.Edges or any(type(e.Curve).__name__!='Circle' for e in face.Edges): return False
+    coordinate=_coord(tuple(face.Surface.Position),axis)
+    for hole in holes:
+        if hole['axis']!=axis: continue
+        radii={round(e.Curve.Radius,5) for e in face.Edges}
+        if not all(all(abs(e.Curve.Center[i]-hole['center'][i])<TOL for i in range(3) if 'XYZ'[i]!=axis) for e in face.Edges): continue
+        if hole.get('cbore') and hole.get('cbore_extent') and any(abs(coordinate-x)<TOL for x in hole['cbore_extent']):
+            expected={round(hole['dia']/2,5),round(hole['cbore'][0]/2,5)}
+            area=math.pi*((hole['cbore'][0]/2)**2-(hole['dia']/2)**2)
+            if radii==expected and abs(face.Area-area)<max(1e-5,area*1e-6): return True
+        if hole.get('entry_end') is not None and abs(coordinate-hole['entry_end'])>TOL and any(abs(coordinate-x)<TOL for x in hole['extent']):
+            area=math.pi*(hole['dia']/2)**2
+            if radii=={round(hole['dia']/2,5)} and abs(face.Area-area)<max(1e-5,area*1e-6): return True
+    return False
 
 
 def classify_inclined(face, shape):
@@ -290,8 +355,8 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
     groups = defaultdict(list)
     for h in stacks:
         h["thread"] = thread_of_hole(h, threads)
-        key = (h["axis"], _r(h["dia"], 2), h["through"], _r(h["depth"], 2), h["cbore"] and tuple(_r(v, 2) for v in h["cbore"]),
-               h["csk"] and tuple(_r(v, 1) for v in h["csk"]), thread_key(h["thread"]))
+        key = (h["axis"], _r(h["dia"], 6), h["through"], _r(h["depth"], 6), h["cbore"] and tuple(_r(v, 6) for v in h["cbore"]),
+               h["csk"] and tuple(_r(v, 6) for v in h["csk"]), thread_key(h["thread"]),bool(h.get('csk_both_ends')))
         groups[key].append(h)
     hole_groups = [{"axis": k[0], "dia": k[1], "items": v} for k, v in groups.items()]
     patterns = bolt_circles(hole_groups)
@@ -317,7 +382,10 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
         else:
             text = hole_text(h0, len(g["items"])) + (" EQ SP" if pat else "")
             reqs.append({"kind": "dia", "feature": "hole", "axis": g["axis"], "dia": g["dia"],
-                         "centers": [h["center"] for h in g["items"]], "text": text, "count": len(g["items"]), "prio": 3})
+                         "centers": [h["center"] for h in g["items"]], "text": text, "count": len(g["items"]), "prio": 3,
+                         'extents':[h['extent'] for h in g['items']],
+                         'entry_sign':(1 if h0['entry_end']==h0['extent'][1] else -1) if h0.get('entry_end') is not None
+                           and all(h.get('entry_end') is not None and (h['entry_end']==h['extent'][1])==(h0['entry_end']==h0['extent'][1]) for h in g['items']) else None})
         for h in g["items"]:
             if id(h) in in_pattern or concentric(g["axis"], h["center"]):
                 continue
@@ -339,7 +407,7 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
             continue
         if not c["full"]:
             continue
-        key = (c["axis"], _r(c["radius"], 3)) + tuple(_r(c["center"][k], 2) for k in range(3) if "XYZ"[k] != c["axis"])
+        key = (c["axis"], _r(c["radius"], 6)) + tuple(_r(c["center"][k], 6) for k in range(3) if "XYZ"[k] != c["axis"])
         if key in seen_ext:
             continue
         seen_ext.add(key)
@@ -387,7 +455,11 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
     for c in cyls:
         if c["full"] or not c["axis"]:
             continue
-        radii[(_r(c["radius"], 3), c["axis"])] += 1
+        if c['internal'] and any(h['axis']==c['axis'] and abs(h['dia']/2-c['radius'])<1e-6
+                and all(abs(h['center'][i]-c['center'][i])<1e-6 for i in range(3) if 'XYZ'[i]!=c['axis'])
+                and h['extent'][0]-1e-6<=c['extent'][0] and h['extent'][1]+1e-6>=c['extent'][1] for h in stacks):
+            continue  # intersection patches belong to the already dimensioned bore
+        radii[(_r(c["radius"], 6), c["axis"])] += 1
         if c.get("span", 0) >= math.pi - 1e-3:
             # slot ends / rounded ends: the arc centre must be located
             for a in "XYZ":
@@ -410,7 +482,7 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
                          "text": "SR%.2w", "prio": 2})
 
     # --- planar faces ------------------------------------------------------------
-    pos, inclined = plane_positions(shape)
+    pos, inclined = plane_positions(shape, stacks)
     for a in "XYZ":
         for coord in sorted(pos[a]):
             loc(a, coord, "face", prio=3 if abs(coord - hi[a]) < TOL else 1)
@@ -418,7 +490,7 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
     for f in inclined:
         kind, size = classify_inclined(f, shape)
         if kind == "chamfer":
-            chamfers[_r(size, 2)] += 1
+            chamfers[_r(size, 6)] += 1
             continue
         reqs.append({"kind": "angle", "face": f, "prio": 2})
         for e in f.Edges:
@@ -433,7 +505,7 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
                 if a != ea:
                     loc(a, _coord((p.x, p.y, p.z), a), "incline-edge", prio=1)
     for ax, leg, f in cone_chamfers(shape):
-        chamfers[_r(leg, 2)] += 1
+        chamfers[_r(leg, 6)] += 1
     for leg, n in sorted(chamfers.items()):
         reqs.append({"kind": "chamfer", "leg": leg, "count": n, "prio": 2,
                      "text": (f"{n}× " if n > 1 else "") + f"C{_fmt(leg)}"})

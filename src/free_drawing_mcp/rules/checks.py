@@ -387,7 +387,8 @@ def _c7(c: Ctx):
         yield F("C.7", "fail", "isometric view is not shaded in colour (project rule: full-colour isometric)",
                 objects=[iso["name"]], bbox=b, hint="recreate with iso_style='shaded'")
     sc = iso.get("scale")
-    if sc and abs(sc - 0.5) > 1e-6:
+    enlarged=bool(c.meta.get('iso_readability_enlarged') and sc and sc>0.5)
+    if sc and abs(sc - 0.5) > 1e-6 and not enlarged:
         yield F("C.7", "warn", f"isometric at {scale_text(sc)} instead of 1 : 2 (reduced to fit)", objects=[iso["name"]], bbox=b)
     if b and c.tb:
         w, h = b[2] - b[0], b[3] - b[1]
@@ -400,6 +401,8 @@ def _c7(c: Ctx):
             return
     if iso.get("shaded") and not (sc and abs(sc - 0.5) > 1e-6):
         yield F("C.7", "pass", "compact shaded isometric 1 : 2 bottom-right")
+    elif iso.get("shaded") and enlarged:
+        yield F('C.7','pass','coloured isometric enlarged for recognition, bottom-right')
     elif iso.get("shaded"):
         yield F("C.7", "pass", "shaded isometric bottom-right")
 
@@ -501,7 +504,6 @@ def _e1(c: Ctx):
         ok = any(d.get("model_axis") == axis and d.get("value") is not None and abs(d["value"] - L) < 0.02 for d in c.dims)
         ok = ok or any(d["type"] in ("Diameter",) or "⌀" in d.get("text", "") for d in c.dims
                        if d.get("value") is not None and abs(d["value"] - L) < 0.02)
-        ok = ok or bool(re.search(rf"\bt\s*=?\s*{_num_re(L)}\b", c.all_text))
         if not ok:
             issues += 1
             yield F("E.1", "fail", f"overall size along {axis} ({L:g} mm) is not dimensioned")
@@ -510,12 +512,20 @@ def _e1(c: Ctx):
     for d in c.dims:  # sizes stated inside callouts, e.g. counterbore '⌴⌀11'
         for m in re.finditer(r"[⌀Ø]\s*(\d+(?:[.,]\d+)?)", d.get("text", "")):
             sizes.add(round(float(m.group(1).replace(",", ".")), 2))
+    chamfers=[float(m.group(1).replace(',','.')) for d in c.dims for m in re.finditer(r'\bC\s*(\d+(?:[.,]\d+)?)',d.get('text',''))]
     for v in c.ortho:
         for circ in v.get("circles", []):
             r = circ.get("model_radius")
             if not circ.get("full") or r is None:
                 continue
             if round(2 * r, 2) in sizes:
+                continue
+            derived=any(round(2*other.get('model_radius',0),2) in sizes and g.length([*circ['center'],*other['center']])<.01
+                        and any(abs(abs(2*r-2*other.get('model_radius',0))-2*leg)<.01 for leg in chamfers)
+                        for other in v.get('circles',[]))
+            if derived:
+                yield F('E.1','review',f"circle ⌀{2*r:g} may be derived from a concentric diameter and chamfer; confirm callout scope",
+                        objects=[v['name']])
                 continue
             issues += 1
             b = [circ["center"][0] - circ["radius"], circ["center"][1] - circ["radius"],
@@ -524,7 +534,7 @@ def _e1(c: Ctx):
                     fix=[{"op": "add_dimension", "view": v["name"], "type": "Diameter", "refs": [circ["edge"]],
                           "x": round(b[2] + 8, 2), "y": round(b[3] + 8, 2), "format_spec": "⌀%.2w"}], auto=True)
     if not issues:
-        yield F("E.1", "pass", "every overall size and circle is dimensioned once")
+        yield F("E.1", "pass", "recognised overall and circular sizes are annotated; full definition requires independent reconstruction")
 
 
 def _num_re(v: float) -> str:
@@ -584,10 +594,30 @@ def _e8(c: Ctx):
         if not v or d.get("value") is None:
             continue
         same = [ci for ci in v.get("circles", []) if ci.get("full") and abs(2 * (ci.get("model_radius") or 0) - d["value"]) < 0.01]
+        # Equal diameters do not imply equal depths, counterbores or fits. Keep
+        # circles with their own distinct callout out of this callout's scope.
+        separately_sized = {ref for other in c.dims if other['name'] != d['name'] and other.get('view') == d.get('view')
+                            and other['type'] == 'Diameter' and other.get('value') is not None
+                            and abs(other['value']-d['value']) < .01 and _bare_text(other['text']) != _bare_text(d['text'])
+                            for ref in other.get('refs', [])}
+        same = [ci for ci in same if not separately_sized.intersection(ci.get('edges',[ci.get('edge')]))]
+        other_view_axes = []
+        for other in c.dims:
+            if (other.get('view') == d.get('view') or other['type'] != 'Diameter'
+                    or other.get('value') is None or abs(other['value'] - d['value']) >= .01):
+                continue
+            other_view = c.view_by_name.get(other.get('view'), {})
+            for ci in other_view.get('circles', []):
+                if (ci.get('full') and ci.get('axis_identity')
+                        and set(other.get('refs', [])).intersection(ci.get('edges', [ci.get('edge')]))):
+                    other_view_axes.append(ci['axis_identity'])
+        # Only remove other circles: the current callout must still count once.
+        same = [ci for ci in same if set(d.get('refs', [])).intersection(ci.get('edges', [ci.get('edge')]))
+                or not ci.get('axis_identity') or ci['axis_identity'] not in other_view_axes]
         if len(same) > 1:
             problems += 1
-            yield F("E.8", "fail", f"{d['name']} sizes {len(same)} identical holes without multiplicity", objects=[d["name"]],
-                    bbox=d.get("text_box"), fix=[{"op": "set_dimension", "name": d["name"], "format_spec": f"{len(same)}× " + d["format_spec"]}], auto=True)
+            yield F("E.8", "fail", f"{d['name']}: {len(same)} equal-diameter circles lack individual or grouped callout coverage", objects=[d["name"]],
+                    bbox=d.get("text_box"), hint='Confirm depth, type and fit before assigning multiplicity; equal diameter alone is insufficient')
     if not problems:
         yield F("E.8", "pass", "repeated features use n× multiplicity")
 
@@ -631,11 +661,13 @@ def _e10(c: Ctx):
                 fix=[{"op": "move_dimension", "name": d["name"], "x": spot[0], "y": spot[1]}] if spot else None, auto=bool(spot),
                 hint=None if spot else "no free spot nearby - move the view or use a larger sheet")
     crossings = []
-    dim_lines = [(d["name"], d.get("ink_lines", d["lines"])[0]) for d in c.dims if d.get("lines")]
+    dim_lines = [(d["name"], line) for d in c.dims if d.get("lines")
+                 for line in d.get("dimension_lines", d.get("ink_lines", d["lines"])[:1])]
     for i, (na, la) in enumerate(dim_lines):
         for nb, lb in dim_lines[i + 1:]:
-            if g.seg_seg(la, lb) or g.collinear_overlap(la, lb):
-                crossings.append(f"{na}/{nb}")
+            pair = f"{na}/{nb}"
+            if na != nb and pair not in crossings and (g.seg_seg(la, lb) or g.collinear_overlap(la, lb)):
+                crossings.append(pair)
     if crossings:
         yield F("E.10", "fail" if c.meta.get("dimensioned_only") else "warn", "dimension lines cross or overlap each other", objects=crossings[:8])
     remaining = (c.meta.get("annotation_clearance") or {}).get("unresolved", [])
@@ -875,13 +907,15 @@ def rules_O(c: Ctx):
     inside = sheet.get("inside_radii") or []
     radius_dims = {round(d["value"], 2) for d in c.dims if d["type"] == "Radius" and d.get("value") is not None}
     radius_ok = bool(inside) and all(round(r, 2) in radius_dims for r in inside)
-    t_ok = bool(sheet.get("t")) and re.search(rf"\bt\s*=?\s*{_num_re(sheet['t'])}\b", c.all_text)
-    if callout or (radius_ok and t_ok):
+    t_ok = bool(sheet.get("t")) and any(d['type'] in ('DistanceX','DistanceY','Distance')
+             and d.get('role','').endswith(':thickness') and d.get('value') is not None
+             and abs(d['value']-sheet['t'])<.01 for d in c.dims)
+    if t_ok and (callout or radius_ok):
         yield F("O.1", "pass", "thickness and inside bend radius stated" + ("" if callout else "; 90° bends shown in the views"))
     else:
-        missing = ([] if radius_ok else ["inside bend radius"]) + ([] if t_ok else ["sheet thickness t"])
+        missing = ([] if radius_ok else ["inside bend radius"]) + ([] if t_ok else ["dimensioned sheet thickness view"])
         yield F("O.1", "fail" if sheet else "warn", "bend callout incomplete: missing " + ", ".join(missing or ["direction/angle"]),
-                fix=_note_append(c, f"t{sheet['t']:g}") if sheet and not t_ok else None, auto=bool(sheet and not t_ok))
+                hint='Add a thickness dimension between the wall faces on a standard view or section')
     yield F("O.2", "review", "bend order shown where sequence matters")
     yield F("O.3", "review", "bend relief where material would tear")
     if re.search(r"K\s*=|BEND (TABLE|ALLOWANCE)|DEDUCTION", c.all_text, re.I):

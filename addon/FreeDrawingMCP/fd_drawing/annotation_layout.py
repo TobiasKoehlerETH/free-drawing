@@ -2,7 +2,7 @@
 import math
 
 from . import geometry as G
-from .annotation_ink import shifted_dimension, strokes_conflict
+from .annotation_ink import angular_ink, dimension_lines, shifted_dimension, strokes_conflict
 from .snapshot import _dimension_record, _view_record
 
 
@@ -14,7 +14,7 @@ def clear_collisions(page, dims, views, max_passes=4, bounds=None, keepouts=()):
         changed = False
         for dim in dims:
             record = records[dim.Name]
-            if not record.get("text_box") or record["type"] not in ("DistanceX", "DistanceY", "Diameter", "Radius"):
+            if not record.get("text_box") or record["type"] not in ("DistanceX", "DistanceY", "Diameter", "Radius", "Angle"):
                 continue
             others = [r for name, r in records.items() if name != dim.Name]
             before = collision_cost(record, others, geometry, fixed_text, bounds, keepouts)
@@ -28,6 +28,14 @@ def clear_collisions(page, dims, views, max_passes=4, bounds=None, keepouts=()):
                     best = (cost, dx, dy, candidate)
                     if not cost:
                         break
+            if best[0] and record["type"] in ("DistanceX", "DistanceY"):
+                for dx, dy in offsets(record, spacing=4):
+                    candidate = shifted_dimension(record, dx, dy)
+                    cost = collision_cost(candidate, others, geometry, fixed_text, bounds, keepouts)
+                    if cost < best[0]:
+                        best = (cost, dx, dy, candidate)
+                        if not cost:
+                            break
             cost, dx, dy, candidate = best
             if cost < before:
                 dim.X = float(dim.X) + dx
@@ -43,15 +51,26 @@ def clear_collisions(page, dims, views, max_passes=4, bounds=None, keepouts=()):
     return {"moves": moves, "unresolved": unresolved}
 
 
-def offsets(record):
+def offsets(record, spacing=8):
     box = record["text_box"]
     candidates = []
-    if record["type"] in ("DistanceX", "DistanceY"):
+    if record["type"] == "Angle" and record.get("angle_geometry"):
+        vertex = record["angle_geometry"]["vertex"]
+        start, finish = [math.atan2(p[1] - vertex[1], p[0] - vertex[0]) for p in record["angle_geometry"]["ends"]]
+        sweep = (finish - start + math.pi) % (2 * math.pi) - math.pi
+        direction = start + sweep / 2
+        x, y = record["text_center"]
+        clearance = math.hypot(box[2] - box[0], box[3] - box[1]) / 2 + 1
+        for radius in range(6, 81, 4):
+            for side in (1, -1):
+                candidates.append((vertex[0] + side * (radius + clearance) * math.cos(direction) - x,
+                                   vertex[1] + side * (radius + clearance) * math.sin(direction) - y))
+    elif record["type"] in ("DistanceX", "DistanceY"):
         horizontal = record["type"] == "DistanceX"
         along = max(6, (box[2] - box[0] if horizontal else box[3] - box[1]) + 3)
         for level in range(-8, 9):
             for side in (0, -1, 1, -2, 2):
-                delta = (side * along, level * 8) if horizontal else (level * 8, side * along)
+                delta = (side * along, level * spacing) if horizontal else (level * spacing, side * along)
                 if delta != (0, 0):
                     candidates.append(delta)
     else:
@@ -65,6 +84,15 @@ def collision_cost(record, others, geometry, fixed_text, bounds=None, keepouts=(
     box = G.expand(record["text_box"], 0.6)
     ink = record.get("ink_lines", record.get("lines", []))
     text_hits = sum(G.seg_hits_box(line, box) for line in geometry)
+    if record.get("angle_geometry"):
+        arc, _ = angular_ink(record)
+        vertex = record["angle_geometry"]["vertex"]
+        middle = arc[len(arc) // 2]
+        center = record["text_center"]
+        a = math.atan2(middle[1] - vertex[1], middle[0] - vertex[0])
+        b = math.atan2(center[1] - vertex[1], center[0] - vertex[0])
+        # A free-floating angle number must be placed beside its own arc.
+        text_hits += int(math.dist(center, vertex) < 5 or abs((b - a + math.pi) % (2 * math.pi) - math.pi) > .04)
     text_hits += sum(G.seg_hits_box(line, G.expand(record["text_box"], -0.15)) for line in ink)
     text_hits += sum(G.boxes_overlap(box, b) for b in fixed_text)
     text_hits += sum(G.boxes_overlap(box, b) for b in keepouts if b)
@@ -83,7 +111,7 @@ def collision_cost(record, others, geometry, fixed_text, bounds=None, keepouts=(
             text_hits += sum(G.seg_hits_box(line, G.expand(other_box, 0.6)) for line in ink)
         text_hits += sum(G.seg_hits_box(line, box) for line in other_ink)
         if ink and other_ink:
-            crossings += int(strokes_conflict(ink[0], other_ink[0]))
+            crossings += int(any(strokes_conflict(a, b) for a in dimension_lines(record) for b in dimension_lines(other)))
     return 100 * text_hits + crossings
 
 

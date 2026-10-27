@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 import FreeCAD as App
 
 from .standards import DIM_FONT_SIZE, LINE_THIN
-from .annotation_ink import dimension_ink
+from .annotation_ink import angular_ink, dimension_ink
 
 _SVG_NS = "http://www.w3.org/2000/svg"
 _FC_NS = "https://www.freecad.org/wiki/index.php?title=Svg_Namespace"
@@ -190,7 +190,17 @@ def _dimension_svg(d, H):
     tb = d.get("text_box")
     text = d.get("text", "")
     parts = []
-    if t in ("DistanceX", "DistanceY") and len(lines) >= 3 and tc:
+    if t == "Angle" and d.get("angle_geometry"):
+        points, extensions = angular_ink(d)
+        for a, b in zip(points, points[1:]):
+            parts.append(_line(a, b, H))
+        for seg in extensions:
+            parts.append(_line(seg[:2], seg[2:], H))
+        for tip, neighbour in ((points[0], points[1]), (points[-1], points[-2])):
+            length = math.dist(tip, neighbour)
+            parts.append(_arrow(tip, ((tip[0] - neighbour[0]) / length, (tip[1] - neighbour[1]) / length), H))
+        parts.append(_text(tc, text, H))
+    elif t in ("DistanceX", "DistanceY") and len(lines) >= 3 and tc:
         k = 0 if t == "DistanceX" else 1  # measured axis index
         o = 1 - k
         (p1, q1), (p2, q2) = (lines[1][0:2], lines[1][2:4]), (lines[2][0:2], lines[2][2:4])

@@ -1,10 +1,30 @@
 """Inspect the strokes actually exported, including outside text and leaders."""
 import importlib.util
+import math
 from conftest import ROOT
 
 spec = importlib.util.spec_from_file_location("annotation_ink", ROOT / "addon/FreeDrawingMCP/fd_drawing/annotation_ink.py")
 ink = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ink)
+
+
+def test_angular_arc_and_witnesses_follow_label_radius_without_moving_references():
+    record = {"type": "Angle", "angle_geometry": {"vertex": [0, 0], "ends": [[10, 0], [0, 10]]},
+              "text_center": [20, 20], "text_box": [16, 18, 24, 22], "lines": []}
+    points, extensions = ink.angular_ink(record)
+    assert len(points) > 8 and len(extensions) == 2
+    assert abs(points[0][1]) < 1e-10 and abs(points[-1][0]) < 1e-10
+    assert points[0][0] > 20 and points[-1][1] > 20
+    assert extensions[0][:2] == [11, 0]
+    shifted = ink.shifted_dimension(record, 10, 10)
+    new_points, _ = ink.angular_ink(shifted)
+    assert math.dist(new_points[0], [0, 0]) > math.dist(points[0], [0, 0])
+    assert shifted['angle_geometry'] == record['angle_geometry']
+    assert shifted['ink_lines'] != ink.dimension_ink(record)
+    opposite = ink.shifted_dimension(record, -40, -40)
+    opposite_points, _ = ink.angular_ink(opposite)
+    assert opposite_points[0][0] < 0 and opposite_points[-1][1] < 0
+    assert math.dist(opposite_points[0], [0, 0]) == math.dist(points[0], [0, 0])
 
 
 def test_short_dimension_accounts_for_outside_arrows_and_text():
@@ -44,6 +64,7 @@ def test_crossing_and_collinear_overlap_are_collisions_but_shared_endpoint_is_no
     assert ink.strokes_conflict([0, 0, 10, 0], [5, -5, 5, 5])
     assert ink.strokes_conflict([0, 0, 10, 0], [5, 0, 15, 0])
     assert not ink.strokes_conflict([0, 0, 10, 0], [10, 0, 20, 0])
+    assert ink.strokes_conflict([0, 0, 10, 0], [1, .1, 8, .15])
 
 
 def test_caption_is_below_dimension_stack_not_only_view_outline():
