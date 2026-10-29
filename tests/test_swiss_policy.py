@@ -30,3 +30,27 @@ def test_missing_supplementary_view_fails(snap):
 def test_failed_section_geometry_fails(snap):
     snap["views"].append({"name": "SectionA", "kind": "section", "section_error": "invalid cut"})
     assert any(f.rule == "D.1" and f.status == "fail" for f in inspect(snap).findings)
+
+
+@pytest.mark.parametrize('suffix,missing_depth', [(' ↧12', False), ('', True)])
+def test_internal_thread_without_class_still_needs_a_depth(snap, suffix, missing_depth):
+    snap['meta']['threads'] = [{'designation': 'M8×1.25', 'major_dia': 8, 'internal': True, 'handed': 'RH'}]
+    snap['dimensions'][-1]['text'] = 'M8×1.25' + suffix
+    findings = inspect(snap).findings
+    assert any(f.rule == 'J.2' and f.status == 'warn' for f in findings)
+    assert any(f.rule == 'J.3' and f.status == ('warn' if missing_depth else 'pass') for f in findings)
+    assert not any(f.fix for f in findings if f.rule == 'J.2')
+
+
+@pytest.mark.parametrize('projection', ['first', 'third'])
+def test_rear_view_uses_freecad_far_right_position_in_both_projections(snap, projection):
+    from copy import deepcopy
+
+    front = snap['views'][1]
+    rear = deepcopy(front)
+    rear.update(name='Rear', projection_type='Rear', center=[250, 180], bbox=[210, 160, 290, 200])
+    snap['views'] = [snap['views'][0], front, rear]
+    snap['projection'] = projection
+    assert not any(f.rule == 'C.2' and f.status == 'fail' for f in inspect(snap).findings)
+    rear['center'] = front['center']
+    assert any(f.rule == 'C.2' and f.status == 'fail' for f in inspect(snap).findings)

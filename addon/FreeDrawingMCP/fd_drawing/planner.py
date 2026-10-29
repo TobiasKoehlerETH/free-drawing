@@ -88,24 +88,36 @@ class Realizer:
             mv = vg.model_value(la, c["center"][1 if la == "y" else 0])
             if mv is None or abs(mv - coord) > 2e-3:
                 continue
-            idx = vg.find_vertex(c["center"])
-            if idx is None:
-                p3 = vg.center3d + vg.xdir * c["center"][0] + vg.up * c["center"][1]
-                try:
-                    vg.view.makeCosmeticVertex3d(p3)
-                    vg.view.Document.recompute()
-                    vg.vertices = list(G.iter_vertices(vg.view))
-                    idx = vg.find_vertex(c["center"])
-                except Exception:
-                    idx = None
+            idx = G.ensure_cosmetic_vertex(vg.view, c['center'])
+            vg.vertices = list(G.iter_vertices(vg.view))
             if idx is not None:
                 pt = {"x": c["center"][0], "y": c["center"][1], "vertex": idx, "visible": c["visible"], "kind": "center"}
                 out.append(pt)
                 self.points[(vg.name, la)].append(pt)
         return out
 
+    def _circular_datum(self, vg, la, coordinate):
+        """Use an actual circular outline extremum when it has no topology vertex."""
+        axis_index = 1 if la == 'y' else 0
+        out = []
+        for circle in vg.circles:
+            for sign in (-1, 1):
+                point = list(circle['center'])
+                point[axis_index] += sign * circle['radius']
+                if abs(vg.model_value(la, point[axis_index]) - coordinate) > 1e-6:
+                    continue
+                index = G.ensure_cosmetic_vertex(vg.view, point)
+                vg.vertices = list(G.iter_vertices(vg.view))
+                if index is not None:
+                    out.append({'x': point[0], 'y': point[1], 'vertex': index,
+                                'visible': circle['visible'], 'kind': 'outline-datum'})
+        self.points[(vg.name, la)].extend(out)
+        return out
+
     # ----------------------------------------------------------- requirements
     def diameter(self, r):
+        from .sections import is_section
+
         radius = r["dia"] / 2.0
         cands = []
         turned = _profile_dia(r)
@@ -121,6 +133,10 @@ class Realizer:
                     score = self._score(vg, c["visible"], 4 if not turned else -2)
                     cands.append((score, ("circle", vg, c)))
             la_across = None
+            if r.get('entry_sign') and not is_section(vg.view):
+                # A side projection cannot identify the entry of a blind hole
+                # or a one-sided counterbore. Use the entry face or a real cut.
+                continue
             if r["axis"] in "XYZ" and _local_axis_for(vg, r["axis"]) is not None:
                 # profile view: linear ⌀ across the silhouette lines
                 for la in ("x", "y"):
@@ -128,22 +144,7 @@ class Realizer:
                     if ax and ax != r["axis"]:
                         la_across = la
                 if la_across:
-                    c3 = r["centers"][0]
-                    pts = self.points[(vg.name, la_across)]
-                    lo = _match(pts, la_across, vg, _coord3(c3, vg.model_axis(la_across)[0]) - radius)
-                    hi = _match(pts, la_across, vg, _coord3(c3, vg.model_axis(la_across)[0]) + radius)
-                    other = "y" if la_across == "x" else "x"
-                    pair = None
-                    for a in sorted(lo, key=lambda p: -p["visible"]):
-                        axial_coordinate=vg.model_value(other,a[other])
-                        if r.get('extents') and (axial_coordinate is None or not any(low-1e-6<=axial_coordinate<=high+1e-6 for low,high in r['extents'])):
-                            continue
-                        for b in hi:
-                            if abs(a[other] - b[other]) < 2e-3:
-                                pair = (a, b)
-                                break
-                        if pair:
-                            break
+                    pair = self._diameter_pair(vg, r, la_across)
                     if pair:
                         vis = pair[0]["visible"] and pair[1]["visible"]
                         cands.append((self._score(vg, vis, 4 if turned else -1), ("linear", vg, pair, la_across)))
@@ -154,7 +155,7 @@ class Realizer:
         if best[0] == "circle":
             _, vg, c = best
             self.specs.append({"view": vg, "type": "Diameter", "refs": [f"Edge{c['edge']}"], "format": r["text"],
-                               "role": f"diameter:{r.get('feature', 'hole')}", "circle": c})
+                               "role": f"diameter:{r.get('feature', 'hole')}", "circle": c, "hidden": not c['visible']})
             self.dia_views[id(r)] = vg.name
         else:
             _, vg, (a, b), la = best
@@ -164,6 +165,30 @@ class Realizer:
                                "role": f"diameter:{r.get('feature', 'hole')}", "side": side,
                                "span": (a[la], b[la]), "hidden": not (a["visible"] and b["visible"])})
             self.dia_views[id(r)] = vg.name
+
+    def _diameter_pair(self, vg, requirement, across):
+        """Match both silhouette witnesses within the same physical cylinder."""
+        along = "y" if across == "x" else "x"
+        model_axis = vg.model_axis(across)[0]
+        radius = requirement['dia'] / 2
+        points = self.points[(vg.name, across)]
+        extents = requirement.get('extents')
+        pairs = []
+        for index, center in enumerate(requirement['centers']):
+            extent = extents[index] if extents else requirement.get('extent')
+            low = _match(points, across, vg, _coord3(center, model_axis) - radius)
+            high = _match(points, across, vg, _coord3(center, model_axis) + radius)
+            for a in low:
+                coordinate = vg.model_value(along, a[along])
+                if extent and not extent[0] - 1e-6 <= coordinate <= extent[1] + 1e-6:
+                    continue
+                for b in high:
+                    if abs(a[along] - b[along]) < 2e-3:
+                        pairs.append((a, b))
+        if not pairs:
+            return None
+        return max(pairs, key=lambda pair: (pair[0]['visible'] and pair[1]['visible'],
+                                           pair[0]['visible'] + pair[1]['visible']))
 
     def _point_vertex(self, vg, la, r):
         """Vertex for a position no edge marks (thread run-out on a plain cylinder).
@@ -177,15 +202,8 @@ class Realizer:
         across = vg.up if la == "x" else vg.xdir
         p3 = p3 + across * float(r.get("radial", 0.0))
         lp = _project(vg, p3)
-        idx = vg.find_vertex(lp)
-        if idx is None:
-            try:
-                vg.view.makeCosmeticVertex3d(p3)
-                vg.view.Document.recompute()
-                vg.vertices = list(G.iter_vertices(vg.view))
-                idx = vg.find_vertex(lp)
-            except Exception:
-                idx = None
+        idx = G.ensure_cosmetic_vertex(vg.view, lp)
+        vg.vertices = list(G.iter_vertices(vg.view))
         if idx is None:
             return []
         pt = {"x": lp[0], "y": lp[1], "vertex": idx, "visible": True, "kind": "cosmetic"}
@@ -206,12 +224,14 @@ class Realizer:
                 if not tgt:
                     tgt = self._center_vertex(vg, la, r["coord"])
             dat = _match(pts, la, vg, r["datum"])
+            if not dat:
+                dat = self._circular_datum(vg, la, r['datum'])
             aff = 4 if affinity_view == vg.name else 0
             if dat and not tgt and r.get("point3d"):
                 deferred.append((self._score(vg, True, aff), vg, la, dat))
             if not tgt or not dat:
                 continue
-            vis = any(p["visible"] for p in tgt)
+            vis = any(p["visible"] for p in tgt) and any(p["visible"] for p in dat)
             cands.append((self._score(vg, vis, aff), vg, la, tgt, dat))
         if not cands and deferred:
             # no edge marks the position: one cosmetic vertex on the best view only
@@ -234,7 +254,7 @@ class Realizer:
         self.specs.append({"view": vg, "type": "DistanceX" if la == "x" else "DistanceY",
                            "refs": [f"Vertex{datum['vertex']}", f"Vertex{target['vertex']}"], "format": "%.2w",
                            "role": f"baseline:{r['axis']}:{r['source']}", "side": side,
-                           "span": (datum[la], target[la]), "hidden": not target["visible"]})
+                           "span": (datum[la], target[la]), "hidden": not (target["visible"] and datum["visible"])})
 
     def radius(self, r, prefix="R"):
         best = None

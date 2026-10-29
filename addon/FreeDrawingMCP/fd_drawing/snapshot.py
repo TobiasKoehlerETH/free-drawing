@@ -373,9 +373,12 @@ def _ref_points_local(view, subs):
 
 
 def _refs_hidden(view, subs):
+    import Part
+
     vis = G.visibility_map(view)
     hidden = False
     vis_vertices = None
+    visible_edges = []
     for s in subs:
         m = re.match(r"(Vertex|Edge)(\d+)$", s)
         if not m:
@@ -390,6 +393,7 @@ def _refs_hidden(view, subs):
                 for i, e in G.iter_edges(view):
                     if not vis.get(i, True):
                         continue
+                    visible_edges.append(e)
                     for v in e.Vertexes:
                         vis_vertices.add((round(v.Point.x, 2), round(v.Point.y, 2)))
                     if type(e.Curve).__name__ == "Circle":
@@ -398,7 +402,11 @@ def _refs_hidden(view, subs):
             try:
                 p = view.getVertexByIndex(idx).Point
                 if (round(p.x, 2), round(p.y, 2)) not in vis_vertices:
-                    hidden = True
+                    # Circular outline extrema and other cosmetic witnesses need
+                    # not coincide with an edge's topology vertices.
+                    point = Part.Vertex(p)
+                    if not any(edge.distToShape(point)[0] <= 1e-5 for edge in visible_edges):
+                        hidden = True
             except Exception:
                 pass
     return hidden

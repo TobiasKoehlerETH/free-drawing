@@ -134,10 +134,19 @@ def hole_stacks(shape, cyls):
         low_open=opens_to_exterior(shape,axis,c,lo,-1)
         high_open=opens_to_exterior(shape,axis,c,hi,1)
         through=low_open and high_open
+        entry_sign = 1 if high_open and not low_open else -1 if low_open and not high_open else None
+        if through and cbore_extent:
+            if abs(cbore_extent[0] - lo) < TOL and abs(cbore_extent[1] - hi) > TOL:
+                entry_sign = -1
+            elif abs(cbore_extent[1] - hi) < TOL and abs(cbore_extent[0] - lo) > TOL:
+                entry_sign = 1
+        elif through and countersinks and not both:
+            entry_sign = countersinks[0][2]
         depth = hi - lo
         out.append({"axis": axis, "center": tuple(c), "dia": 2 * main["radius"], "through": through,
                     "depth": depth, "cbore": cbore, "cbore_extent": cbore_extent, "csk": csk, "extent": (lo, hi),
                     'csk_both_ends':both,
+                    'entry_sign': entry_sign,
                     'entry_end':hi if high_open and not low_open else lo if low_open and not high_open else None})
     return out
 
@@ -314,10 +323,11 @@ def threads_of_cylinder(c, threads):
 
 
 def thread_key(t):
-    """Threads with the same key share one callout (``2× M8×1.25-6H ↧12``)."""
+    """Threads with the same specification share one callout."""
     if t is None:
         return None
-    return (t["designation"], t["internal"], t["handed"], t["through"], _r(t["length"], 2) if t["internal"] else None)
+    return (t["designation"], t["internal"], t["handed"], t["through"],
+            _r(t["length"], 2) if t["internal"] else None, t.get("tolerance_class"))
 
 
 # -------------------------------------------------------------- top level
@@ -356,7 +366,8 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
     for h in stacks:
         h["thread"] = thread_of_hole(h, threads)
         key = (h["axis"], _r(h["dia"], 6), h["through"], _r(h["depth"], 6), h["cbore"] and tuple(_r(v, 6) for v in h["cbore"]),
-               h["csk"] and tuple(_r(v, 6) for v in h["csk"]), thread_key(h["thread"]),bool(h.get('csk_both_ends')))
+               h["csk"] and tuple(_r(v, 6) for v in h["csk"]), thread_key(h["thread"]),
+               bool(h.get('csk_both_ends')), h['entry_sign'])
         groups[key].append(h)
     hole_groups = [{"axis": k[0], "dia": k[1], "items": v} for k, v in groups.items()]
     patterns = bolt_circles(hole_groups)
@@ -378,14 +389,14 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
             text = threads_mod.callout(t0, len(g["items"])) + (" EQ SP" if pat else "")
             reqs.append({"kind": "dia", "feature": "thread", "internal": True, "axis": g["axis"], "dia": g["dia"],
                          "centers": [h["center"] for h in g["items"]], "text": text, "count": len(g["items"]),
-                         "prio": 3, "thread": threads_mod.summary(t0)})
+                         "prio": 3, "thread": threads_mod.summary(t0),
+                         "entry_sign": h0['entry_sign'], 'extents': [h['extent'] for h in g['items']]})
         else:
             text = hole_text(h0, len(g["items"])) + (" EQ SP" if pat else "")
             reqs.append({"kind": "dia", "feature": "hole", "axis": g["axis"], "dia": g["dia"],
                          "centers": [h["center"] for h in g["items"]], "text": text, "count": len(g["items"]), "prio": 3,
                          'extents':[h['extent'] for h in g['items']],
-                         'entry_sign':(1 if h0['entry_end']==h0['extent'][1] else -1) if h0.get('entry_end') is not None
-                           and all(h.get('entry_end') is not None and (h['entry_end']==h['extent'][1])==(h0['entry_end']==h0['extent'][1]) for h in g['items']) else None})
+                         'entry_sign': h0['entry_sign']})
         for h in g["items"]:
             if id(h) in in_pattern or concentric(g["axis"], h["center"]):
                 continue
@@ -429,6 +440,14 @@ def requirements(shape, turned_axis=None, assembly=False, threads=None):
                 ca = _coord(c["center"], a)
                 # a cylinder that forms the outer boundary is located by its ⌀ and the overall size
                 if abs(ca - c["radius"] - lo[a]) < TOL or abs(ca + c["radius"] - hi[a]) < TOL:
+                    continue
+                # A concentric boss shares the enclosing cylinder's axis. Measuring
+                # that axis from a circular silhouette adds a redundant requirement.
+                if any(o['axis'] == c['axis']
+                       and _on_line(c['axis'], o['center'], c['center'], tol=1e-6)
+                       and abs(_coord(o['center'], a) - o['radius'] - lo[a]) < TOL
+                       and abs(_coord(o['center'], a) + o['radius'] - hi[a]) < TOL
+                       for o in outer_axes):
                     continue
                 loc(a, ca, "boss-center", needs_center=True, prio=2)
 

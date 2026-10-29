@@ -9,7 +9,8 @@ draws a thread conventionally:
   minor diameter, thin 3/4 circle at the minor diameter in the end view;
 * internal thread: hole at the MINOR (tap drill) diameter, thin line at the
   major diameter, thin 3/4 circle at the major diameter in the end view;
-* the thread is specified by a callout ``M20×2.5-6g`` / ``2× M8×1.25-6H ↧12``.
+* the modeled size, pitch and hand supply the geometric callout; a tolerance
+  class must come from an explicit manufacturing specification.
 
 This module finds the threads (:func:`detect_threads`), names them
 (:func:`iso_designation`), and replaces the helical geometry by the plain
@@ -87,8 +88,10 @@ def iso_designation(major, pitch):
 
 
 def callout(t, count=1):
-    """Thread callout text: ``2× M8×1.25-6H ↧12``, ``M20×2.5-6g``, ``... LH``."""
-    txt = (f"{count}× " if count > 1 else "") + t["designation"] + "-" + ("6H" if t["internal"] else "6g")
+    """Format the known thread facts, without inferring a tolerance class."""
+    txt = (f"{count}× " if count > 1 else "") + t["designation"]
+    if t.get("tolerance_class"):
+        txt += "-" + t["tolerance_class"]
     if t["handed"] == "LH":
         txt += " LH"
     if t["internal"]:
@@ -450,5 +453,6 @@ def summary(t):
     keys = ("axis", "center", "internal", "major_dia", "minor_dia", "pitch", "handed", "extent", "length",
             "through", "designation", "nominal")
     out = {k: (list(t[k]) if isinstance(t[k], tuple) else t[k]) for k in keys}
+    out["tolerance_class"] = t.get("tolerance_class")
     out["callout"] = callout(t)
     return out

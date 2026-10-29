@@ -31,7 +31,7 @@ Collect available information from the colleague, existing drawing or project sp
 
 Start the geometric draft with what is known. Keep missing requirements on an open-items list. Do not invent `ISO 2768-mK`, `Ra 3.2`, a material or an edge break merely to clear inspection findings. Modelled holes are not proof of a thread specification; imported PMI is not guaranteed to be extracted by this tool.
 
-The existing modelled-thread detector currently inserts `6H` or `6g`. Treat these generated classes as assumptions and confirm or correct them before release.
+The modelled-thread detector does not supply a tolerance class. Confirm the intended class and add it to the callout before release. Older drawings generated before 2026-10-29 may contain assumed `6H` or `6g` classes that need review.
 
 ## 3. Check the backend and generate a draft
 

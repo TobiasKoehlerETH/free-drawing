@@ -61,6 +61,9 @@ Images are direct exports of the bundled sample parts. The plate, flange and tra
 - **Bolt circles**: `6× ⌀9 THRU EQ SP`, plus a dash-dot ⌀ pitch circle.
 - **Radii** are grouped (`4× R5`) and slot ends are located. Also covered: **chamfers** (`2× C1.5`), **angles** of inclined faces, spheres (`SR`), and native thickness dimensions on plate edge views.
 - **Threads** get a callout when the thread is modelled. A plain tap-drill hole is reported for review (see [Limitations](#limitations)).
+- Blind holes and one-sided counterbores/countersinks retain their entry direction. Opposite-face features get separate callouts and an additional projection when needed, including a rear view. Thread tolerance classes require explicit design input.
+- Diameter witnesses stay within their cylinder's axial extent. Round outlines supply verified extremum references for baseline locations; concentric bosses share the enclosing cylinder's axis.
+- The [machining feature validation](docs/production-drawing-validation-2026-10-29.md) records regression checks and a 12-drawing export audit.
 - Each requirement is placed **once**, on visible geometry where any view offers it. A final dedupe pass removes repeated dimensions. Anything the tool could not place is reported, never silently dropped.
 - Dimensions use 0.35 mm lines, 3 mm filled arrows and 3.5 mm `osifont` text in paper units. Layout never shrinks the text to fit. Collision checks include exported line extensions, angular arcs, radial shoulders and captions.
 - Standard views carry the main dimensions. Strict automatic output uses at most one section for hidden/unplaced requirements and one detail for genuinely small features; undimensioned extras are hidden.

@@ -53,7 +53,7 @@ All broad-run drawings report missing material/tolerance input because the corpu
 
 The final suite passed 134 tests (127 pure Python, 7 real FreeCAD). The five-case final stress rerun completed and retained the documented unresolved findings. Passing the regression suite establishes those tested behaviours, not release readiness for every shape.
 
-An additional source review found that `threads.callout` still supplies `6H` / `6g` for detected modelled threads. These are generator assumptions, not requirements recovered from the STEP file. Confirm or replace them from the designer's specification before release; removing automatic thread-class inference is remaining implementation work.
+The 2026-10-17 source review found that `threads.callout` supplied `6H` / `6g` without design input. This was removed on 2026-10-29. Generated callouts now omit an unspecified class and inspection reports it as incomplete. Existing drawings containing automatically assigned classes still require review.
 
 ## Standards and source handling
 

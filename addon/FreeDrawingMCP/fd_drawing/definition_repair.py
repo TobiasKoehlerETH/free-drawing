@@ -196,14 +196,9 @@ def prove_uniform_extrusion(shape,axis):
 
 def vertex(view, point):
     local=((point[0]-G.view_origin(view)[0])/G.view_scale(view),(point[1]-G.view_origin(view)[1])/G.view_scale(view))
-    for index,p in G.iter_vertices(view):
-        if G.dist(p,local) < 1e-7: return f'Vertex{index}'
-    center=_source_center(view)
-    world=center+App.Vector(view.XDirection)*local[0]+G.up_vector(view.Direction,view.XDirection)*local[1]
-    view.makeCosmeticVertex3d(world)
-    view.Document.recompute()
-    for index,p in G.iter_vertices(view):
-        if G.dist(p,local)<1e-5: return f'Vertex{index}'
+    index = G.ensure_cosmetic_vertex(view, local)
+    if index is not None:
+        return f'Vertex{index}'
     raise ValueError('Could not attach dimension to drawing witness')
 
 

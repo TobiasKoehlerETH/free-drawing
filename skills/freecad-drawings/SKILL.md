@@ -25,7 +25,7 @@ For a received model, read [the operating workflow](references/step-to-reviewed-
 ## Decisions that prevent incorrect drawings
 
 - A STEP B-rep supplies nominal geometry, not a complete manufacturing specification. Do not infer material, tolerance class, datum system, finish, thread class or edge allowance to obtain PASS.
-- The current modelled-thread formatter still inserts `6H`/`6g`. Identify these as assumptions and obtain the intended class before release; do not describe them as extracted PMI.
+- Modelled-thread callouts omit an unspecified tolerance class. Obtain the intended class before release. Older drawings may contain automatically inserted `6H`/`6g`; do not describe those as extracted PMI.
 - The current tool creates principal full/half sections and enlarged details. It does not automatically solve auxiliary, offset, broken-out or broken views, rib exemptions, or assembly selective sectioning. Preserve gaps as engineering work.
 - Automatic sections of multi-solid models are deferred to preserve component identity. Half sections require demonstrated symmetry.
 - Dimensions on hidden lines should be reassigned to actual visible cut/auxiliary geometry. Re-resolve the references; `EdgeN`/`VertexN` are not portable between views.

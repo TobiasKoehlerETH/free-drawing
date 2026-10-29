@@ -1,0 +1,637 @@
+{
+  "date": "2026-10-29",
+  "python_tests_passed": 236,
+  "existing_freecad_tests_passed": 37,
+  "new_freecad_tests_passed": 8,
+  "testing": "Broad suite plus focused reruns after fixes",
+  "engine": "C:\\Code\\free-drawing",
+  "code_sha256": {
+    "src\\free_drawing_mcp\\__init__.py": "c0b5a8b74489a9dfc0b112cc254d2160d34f58e3578bc77d4c5d6aaf94659846",
+    "src\\free_drawing_mcp\\backends.py": "f3c2822586ed90ea713bc97a92495045dd176137f7db1921bc09070cea9534fa",
+    "src\\free_drawing_mcp\\cli.py": "586b5aeb4ce55af4e3d47906687eca228f84fa9a63e950ee651b17a09fedf11f",
+    "src\\free_drawing_mcp\\definition.py": "a5355480ada81a770c74c7a3527ae065e58fe3c1c686fb652959f64f1b43471a",
+    "src\\free_drawing_mcp\\desktop.py": "171c3a64cd6fe621c2af9a36c2ca28ec7b37581a45aeae185f7b4c81fbb3a22c",
+    "src\\free_drawing_mcp\\desktop_jobs.py": "1cfe88922907dec6d96fb20e60e09a61ecfdde5b402be60991692c5cd8d08b91",
+    "src\\free_drawing_mcp\\desktop_launch.py": "33c650d018cc61e1292a5a5270090582b019aae7a4c7a659cd0eb05b2558e7d8",
+    "src\\free_drawing_mcp\\drawing_definition.py": "4447fc636e1befa174b114d18b6116aa07c4e85548006ee5e4a5e21462028af2",
+    "src\\free_drawing_mcp\\rules\\__init__.py": "583fa066ea3f840c3dbadf475ae4ca56ebb41b95f6dddb69983979e77c5c787d",
+    "src\\free_drawing_mcp\\rules\\checks.py": "78de609c12c586e4c66f753d745adea3c000122cac33d7c36c7c7bb10e3339e1",
+    "src\\free_drawing_mcp\\rules\\geom.py": "9998fa088295db098fe22acd4bf6783615e05ae3e676c5c932a832264de9039c",
+    "src\\free_drawing_mcp\\rules\\model.py": "209442dbef9dade62ef80cc4ea3c66c6f815c12d938e154c4e58ef89f07431f2",
+    "src\\free_drawing_mcp\\rules\\purpose.py": "109d3a79be1742d1d727aa298e37c528526d9716ce6c4c51cd38c5f00c7e14fa",
+    "src\\free_drawing_mcp\\server.py": "f27765a4663f525fc4a76909ed39af40c14bbab0d6baa5495e9b31e93d2a0d80",
+    "src\\free_drawing_mcp\\workflow.py": "1ac41af91c9fc40c08b670a2188117b420fb36fd710afd3d352af61f858c587c",
+    "addon\\FreeDrawingMCP\\fd_drawing\\__init__.py": "9bf1e88261da05b54c5895cbb84e809bfb8c4f31fd20cbe2202237edf1185015",
+    "addon\\FreeDrawingMCP\\fd_drawing\\actions.py": "857f26dfcc1913918e810f6ba003c534ad7f9ef231655e29936514409e2d4df0",
+    "addon\\FreeDrawingMCP\\fd_drawing\\analysis.py": "72605390565da7be7999f14b20976c1d10ee8cb38584932da4cbf4c95254aad5",
+    "addon\\FreeDrawingMCP\\fd_drawing\\annotation_ink.py": "8057bf13c614d764d6efaf984a03a9fe750c6cff7749b0f6f427dbda04eac04a",
+    "addon\\FreeDrawingMCP\\fd_drawing\\annotation_layout.py": "1b9cd3b6c3b1069755ffa410d344f8f26a992991dbdfb98d40ee60e1cb422c60",
+    "addon\\FreeDrawingMCP\\fd_drawing\\builder.py": "d8b0010ad7e5caa9344978ba3db12fed347a1a009a7a94057ed64c19fc4614e1",
+    "addon\\FreeDrawingMCP\\fd_drawing\\definition_compare.py": "12fb33fab9adfbaf60748987956e1f88ef807f76f23975ef8ddae29b66187a1e",
+    "addon\\FreeDrawingMCP\\fd_drawing\\definition_repair.py": "b9fdceafcadf48df9cd848ebd9292ed510ca6c5bd4a7384fe252c6649c622655",
+    "addon\\FreeDrawingMCP\\fd_drawing\\dimensions.py": "02eb72530b6a62fe4fe0271f19cff39726aa182d1fa47117c8780468c74ebff9",
+    "addon\\FreeDrawingMCP\\fd_drawing\\drawing_evidence.py": "8c55afd3accebe91feeddca4319fd2d7dbf2bb775d4e2c7adb0a15d581b5cf70",
+    "addon\\FreeDrawingMCP\\fd_drawing\\features.py": "1f8420de79fdd1fe4a14c80512e6dbd7939c0e02529da7816099d66cc222d6fc",
+    "addon\\FreeDrawingMCP\\fd_drawing\\geometry.py": "d57f0ad43f5e34be4771257785113646662ea5599a9facbbd3a493167ebc3cb1",
+    "addon\\FreeDrawingMCP\\fd_drawing\\importer.py": "9d5934f6edec72c66ee38a1718e9c9deedec96feac3201a11362a20152ffd778",
+    "addon\\FreeDrawingMCP\\fd_drawing\\layout_policy.py": "b6c49f59c4cb6f946aebc0a47bc94309409c1f03a1adf3a31fc9abf54836b54f",
+    "addon\\FreeDrawingMCP\\fd_drawing\\ops.py": "e0d6a0f30151a9a7a8c4c292db05193690b6dbca9abc0ad475144e2463af3257",
+    "addon\\FreeDrawingMCP\\fd_drawing\\page.py": "ed3e7ec103a5783c5ff2b8f6477ba87e7e5bcc1edbb6318decfd4a73ba8f2687",
+    "addon\\FreeDrawingMCP\\fd_drawing\\paper_geometry.py": "ca6d8db2f58d85a4ec4e26ada169ba59724273dfc70f77844785d085c99daf48",
+    "addon\\FreeDrawingMCP\\fd_drawing\\planner.py": "4d139e8c9b8cb5b31fdea52ebcecceecb142c7b1f6bbd57e566fd1afe0eee8ca",
+    "addon\\FreeDrawingMCP\\fd_drawing\\progress.py": "005dbbb7d6e3124e8d6e21e9e5a9a9a0ea503205ac19dde4bea5d2133dc96b4f",
+    "addon\\FreeDrawingMCP\\fd_drawing\\projection_check.py": "9b9c4728cf384a1d46d6f5ddf9f5a4425bdc8400e53df0523f7a59b8c4e8f42e",
+    "addon\\FreeDrawingMCP\\fd_drawing\\rebuild_worker.py": "8ec4f3e0e00075416a8589786d17028ab86efb5bdf9e8c569f78cb603d0e001b",
+    "addon\\FreeDrawingMCP\\fd_drawing\\reflow.py": "dee33401621ddc3abe267f893716a5d8693a5490f2e11df19919ed3ae91d71a8",
+    "addon\\FreeDrawingMCP\\fd_drawing\\render.py": "bbeb92844c457b349d27a08201d6e33fccc1de97774fbb390c3837ef6db38eca",
+    "addon\\FreeDrawingMCP\\fd_drawing\\runner.py": "86959d5cbdd65c523ba9b860bef9fe052bc2ea0a990bd20a226f087748e7de27",
+    "addon\\FreeDrawingMCP\\fd_drawing\\sections.py": "2b54d3d242c21a8583a74481d1adbe8a256ba938930d6c92bf564f6325404426",
+    "addon\\FreeDrawingMCP\\fd_drawing\\shaded.py": "748fefb76e6fdb297037572ce0ca685fabf5e5daa3d1d7c2e67ff250e1d4ebc9",
+    "addon\\FreeDrawingMCP\\fd_drawing\\sheetmetal.py": "21c760b9e8b63aa85fc0b21bec8a2314bb6674be4fe94b533a05b1a04a60bf75",
+    "addon\\FreeDrawingMCP\\fd_drawing\\snapshot.py": "c1a0187f1d2d8e13b503bfd7235d5e0af516d173c5ce0d480777c03ebc3a690d",
+    "addon\\FreeDrawingMCP\\fd_drawing\\standards.py": "0341b08c78da609dc0c816fcfaca45d4967797b2960ce3911d147ce21d424551",
+    "addon\\FreeDrawingMCP\\fd_drawing\\templates.py": "24d45d404172453e4aa413e577d202761d8be3cbc68eda36ceb0cc39ac3c62d5",
+    "addon\\FreeDrawingMCP\\fd_drawing\\textfmt.py": "e790b398aeb2537a654a75d4c1e7e91e42a6162297f15a4c3a3fc81c495bf4e7",
+    "addon\\FreeDrawingMCP\\fd_drawing\\threads.py": "35a2b312e63942f2299156249100845e5cdb53be79fed01956607fef361a5254",
+    "addon\\FreeDrawingMCP\\Init.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "addon\\FreeDrawingMCP\\InitGui.py": "cad3f93a837206cc8dda849515305628bfc44e37dde7d9361ea6f6a55cc80fb1",
+    "addon\\FreeDrawingMCP\\rpc_server\\__init__.py": "7591149426074e9372af40b5a14305102246a4a7aff2defd1b11b75a8cfb3ed2",
+    "addon\\FreeDrawingMCP\\rpc_server\\gui_dispatch.py": "94b066007f3d5c3581c68e01da7dc6c59b2ee09f78a62f1b83e05bcda4c7d9a6",
+    "addon\\FreeDrawingMCP\\rpc_server\\server.py": "892407feb60dbb4fe18bf6bba720fcc9048567aab59153f44cd7541ac8855bab",
+    "addon\\FreeDrawingMCP\\rpc_server\\settings.py": "73b32fb0fd6e536fe79017e10cb257805b0a1d0574ba0ce05f1c93dfe6e51910"
+  },
+  "engine_unchanged": true,
+  "cases": [
+    {
+      "part": "coaxial_blind_holes",
+      "family": "machining feature regression",
+      "source": "C:\\Code\\free-drawing\\samples\\validation\\production-final-2026-10-29\\sources\\coaxial_blind_holes.step",
+      "source_sha256": "89b6c3fe98faabbdd78a01cd3e7cca84a6c31e516f1e77c95a070eb74577081e",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "2 : 1",
+      "dimensions": 7,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "1282133038a394030a0ee0a37182547563ba77b45310c160e9b11e97c3dcfa06"
+    },
+    {
+      "part": "concentric_boss",
+      "family": "machining feature regression",
+      "source": "C:\\Code\\free-drawing\\samples\\validation\\production-final-2026-10-29\\sources\\concentric_boss.step",
+      "source_sha256": "452de87f53d763f1a4c210afd109c927f39dee71d3d2164491af9528aadc3220",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "2 : 1",
+      "dimensions": 7,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "14000b500ec218577872934e8b4dcf921715d8b1932244daf6a3c56529d03791"
+    },
+    {
+      "part": "counterbored_block",
+      "family": "counterbored_block",
+      "source": "C:\\Code\\free-drawing\\samples\\parts\\counterbored_block.step",
+      "source_sha256": "5bd7f966a570231be122445b38b3b24bde437ce42f17b9b15ed431d3fc06bcc8",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "2 : 1",
+      "dimensions": 7,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "97450723c557116f9a96b8ceca8cab2bb7fe70f094d74a1b6daf73667a0ed5d8"
+    },
+    {
+      "part": "flange",
+      "family": "flange",
+      "source": "C:\\Code\\free-drawing\\samples\\parts\\flange.step",
+      "source_sha256": "b4a778eeeced7669bbcb229d1980735677547a488dbaa967a81cc7aa87dd48bd",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "1 : 1",
+      "dimensions": 5,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "cc79cf465c5760d869137e8617e90f7941d7dff8d3beb2b996667c6f656fdd81"
+    },
+    {
+      "part": "opposed_blind_holes",
+      "family": "machining feature regression",
+      "source": "C:\\Code\\free-drawing\\samples\\validation\\production-final-2026-10-29\\sources\\opposed_blind_holes.step",
+      "source_sha256": "f9a39623ae318c112877f3e8484c960b1610986f6ecbe727afcfc289f839ef40",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "1 : 1",
+      "dimensions": 9,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "bfd3390f12fa8c2397b70b0034b6c14ea54fe488ac269fe9e0483971968ba6fa"
+    },
+    {
+      "part": "opposed_counterbores",
+      "family": "machining feature regression",
+      "source": "C:\\Code\\free-drawing\\samples\\validation\\production-final-2026-10-29\\sources\\opposed_counterbores.step",
+      "source_sha256": "b45b3750a7f95906f8c24a31aed90e9bb65cbc67d58aec387410673d2c561d64",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "1 : 1",
+      "dimensions": 9,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "ef668f77eaccd70c3c4f621d57f8646d195e3df291be9314dec9e59c65b649d8"
+    },
+    {
+      "part": "opposed_side_holes",
+      "family": "machining feature regression",
+      "source": "C:\\Code\\free-drawing\\samples\\validation\\production-final-2026-10-29\\sources\\opposed_side_holes.step",
+      "source_sha256": "beda18b2080db0ca12a545e5c2d45aa95672f69b4238f119e01c36194438e695",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "2 : 1",
+      "dimensions": 9,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "805955acf09508a40a2f6989f38760c99014950a61c131970af25a9362a7a3c2"
+    },
+    {
+      "part": "plate_hole_pattern",
+      "family": "plate_hole_pattern",
+      "source": "C:\\Code\\free-drawing\\samples\\parts\\plate_hole_pattern.step",
+      "source_sha256": "0eeccb661a7b0d4ef2f50730f9ff124ee431f89eeb17013cfd638584103b725f",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "1 : 1",
+      "dimensions": 11,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "9b68cefefbccc68db381712887e7ffecdbc7ce63eba8e09b8cdede2ef2782c38"
+    },
+    {
+      "part": "rotated_manifold",
+      "family": "intersecting passages",
+      "source": "C:\\Code\\free-drawing\\samples\\complex\\rotated_manifold.step",
+      "source_sha256": "0a63b1b145efa370187497519671bc88ea9bc6cd7aa6be6ac00744e50027cccf",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "1 : 1",
+      "dimensions": 13,
+      "sections": 1,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "C.1",
+          "status": "warn",
+          "message": "front view ProjItem shows more hidden than visible edges"
+        },
+        {
+          "rule": "E.5",
+          "status": "warn",
+          "message": "dimensions attached to hidden lines"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "b6d76f708c3a7dd0b62633b4b72ffc57b3ed1c508642bd33770fa7638ce6e4d4"
+    },
+    {
+      "part": "slotted_plate",
+      "family": "slotted_plate",
+      "source": "C:\\Code\\free-drawing\\samples\\parts\\slotted_plate.step",
+      "source_sha256": "aa562b0171a2c47bd7d3e9b7bbe2d3ba6bd58cc85e7d84bdb82982178a279c92",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "1 : 1",
+      "dimensions": 12,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "7e8a23819209a2fa55c197abf680e4e9652a8d42b436186b904adbb631ced47c"
+    },
+    {
+      "part": "threaded_shaft",
+      "family": "threaded_shaft",
+      "source": "C:\\Code\\free-drawing\\samples\\parts\\threaded_shaft.step",
+      "source_sha256": "c986689447b44697ff6c6d295e1bd3bc0674a953fab060405b2d5f51854aa967",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "2 : 1",
+      "dimensions": 5,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "E.2",
+          "status": "warn",
+          "message": "very long extension lines - dimension far from its feature"
+        },
+        {
+          "rule": "E.5",
+          "status": "warn",
+          "message": "dimensions attached to hidden lines"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "J.2",
+          "status": "warn",
+          "message": "incomplete metric callout(s): M20×2.5"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "ff348e5752d1ecad93c8e6abea475dc7a2db42c85c8169b9ce36ac71941d9c98"
+    },
+    {
+      "part": "turned_shaft",
+      "family": "turned_shaft",
+      "source": "C:\\Code\\free-drawing\\samples\\parts\\turned_shaft.step",
+      "source_sha256": "f22296a71d298844c44d71f52a2bcd4bd289dc647a8a28a999628452f0f08482",
+      "status": "ok",
+      "policy_passed": true,
+      "checks": {
+        "one_coloured_isometric": true,
+        "isometric_bottom_right": true,
+        "isometric_clear_of_views_text_and_lines": true,
+        "isometric_has_no_dimensions": true,
+        "every_defining_view_has_dimensions": true,
+        "standard_views_share_scale": true,
+        "minimal_supplementary_views": true,
+        "dimensions_survive_reopen": true,
+        "drawing_unchanged_on_reopen": true,
+        "source_unchanged": true,
+        "pdf_header": true,
+        "png_header": true
+      },
+      "scale": "2 : 1",
+      "dimensions": 7,
+      "sections": 0,
+      "details": 0,
+      "layout_findings": [],
+      "other_findings": [
+        {
+          "rule": "E.2",
+          "status": "warn",
+          "message": "very long extension lines - dimension far from its feature"
+        },
+        {
+          "rule": "F.1",
+          "status": "fail",
+          "message": "tolerance scheme needs design input"
+        },
+        {
+          "rule": "K.1",
+          "status": "fail",
+          "message": "material not specified"
+        }
+      ],
+      "unplaced": [],
+      "pdf_source": "schematic",
+      "pdf_reviewed": true,
+      "pdf_sha256": "d6f39c51bdafbc0d61c20d8ca7b1f471cdb6a43ec9155d8dc0e58f46cc1ce355"
+    }
+  ]
+}

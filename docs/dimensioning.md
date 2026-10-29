@@ -40,10 +40,10 @@ A *requirement* is one controlling piece of information the drawing must state *
 
 Details:
 
-- **Hole stacks.** Connected internal cylinders are grouped by axis line. The smallest radius is the hole and a larger coaxial cylinder is the counterbore. Connected internal cones can define countersinks. *THRU* requires exterior openings at both ends; opening into another internal passage is insufficient. Separate coaxial blind holes remain distinct. Group signatures include depth, counterbore, countersink and whether the countersink is on both ends.
+- **Hole stacks.** Connected internal cylinders are grouped by axis line. The smallest radius is the hole and a larger coaxial cylinder is the counterbore. Connected internal cones can define countersinks. *THRU* requires exterior openings at both ends; opening into another internal passage is insufficient. Separate coaxial blind holes remain distinct. Group signatures include depth, counterbore, countersink, entry direction, and whether the countersink is on both ends. Identical holes entering opposite faces receive separate callouts. One-sided counterbores and countersinks retain their entry direction even on a through hole.
 - **Hole locations.** Each hole centre is located along the two other axes, except when the hole is part of a PCD pattern, or is concentric with an outer cylinder (tube bore, flange bore). Those are already defined by the ⌀ and the PCD.
 - **Bolt circles.** 2×2 patterns at 45° are left to coordinate dimensioning, which is clearer for rectangular layouts. A pattern centre that is not concentric with an outer cylinder is located like a hole.
-- **Bosses.** A cylinder that forms the outer boundary of the part is not located: its ⌀ and the overall size already fix it.
+- **Bosses.** A cylinder that forms the outer boundary of the part is not located: its ⌀ and the overall size already fix it. A smaller boss concentric with an enclosing cylinder shares that axis. An offset boss still needs its centre locations.
 - **Overall sizes.** One overall size is always required per axis, unless an outer diameter already spans that axis (a flange has no separate 120 × 120).
 - **Merging.** `loc` requirements on the same axis and coordinate are merged. The strongest source wins (overall > hole centre > face), and centres beat faces.
 - **Assemblies.** Assemblies get only their overall sizes. Detail dimensioning belongs on the part drawings.
@@ -79,7 +79,7 @@ Each requirement is turned into a concrete TechDraw dimension, with a view and `
 
 Each candidate view gets a score of **10 if the referenced geometry is visible** (E.5), plus a view priority (Front 3, Top 2, Right/Left 1), plus an affinity bonus:
 
-- **Diameters.** In a circle view the callout is a radial `Diameter` on the circle; holes get +4 here. In a profile view it is a linear distance across the two silhouette lines; turned diameters get +4 here.
+- **Diameters.** In a circle view the callout is a radial `Diameter` on the circle; holes get +4 here. In a profile view it is a linear distance across the two silhouette lines; turned diameters get +4 here. Both witnesses must lie within the selected cylinder's axial extent. Entry-specific callouts use the entrance view or actual section geometry.
 - **Locations.** The view needs real *feature points* for both the target coordinate and the datum: ends of lines perpendicular to the measured axis, circle centres, or corners of slanted edges. Fillet tangent points never count. When a circle centre has no TechDraw vertex, a cosmetic vertex is added. Hole centres get +4 in the view that carries the hole callout, so the positions and the ⌀ are read together.
 - **Radii, spheres.** The best visible arc with that radius.
 - **Chamfers.** A slanted line whose dx and dy both equal the leg, dimensioned as a linear `C` callout.
@@ -88,12 +88,14 @@ Each candidate view gets a score of **10 if the referenced geometry is visible**
 
 Linear dimensions in one view and direction all start at the datum vertex, so they form a **baseline stack** (E.6). If no view can realise a requirement, it is appended to `unplaced` with a readable description, for example `position X=35.0 (hole-center) from datum X=0.0`. The description is stored in the page metadata and reported as an `E.1` FAIL. The tool never silently drops a requirement.
 
+A circular outline may have no topology vertex at the baseline origin. The planner adds a cosmetic vertex at the exact circle extremum. Cosmetic witnesses use unscaled, Y-up view coordinates, are resolved again after recompute, and are reused on subsequent planning passes. This also applies to centre references, thread ends, and reconstruction repairs.
+
 ## 5. View augmentation
 
 When the automatic layout is used, the first realisation is improved in a loop ([02](../guidelines/02-views-and-projection.md), E.1, E.5, C.3):
 
 1. **Badness** = (number unplaced, number of dimensions on hidden lines).
-2. While badness > 0, try adding `Top`, `Right`, `Left` and `Bottom` in turn, up to four views. Re-realise after each addition. Keep the new view only if badness strictly decreases; otherwise remove it again.
+2. While badness > 0, try adding `Top`, `Right`, `Left`, `Bottom`, and `Rear` in turn, up to four views. Re-realise after each addition. Keep the new view only if badness strictly decreases; otherwise remove it again. Rear views are placed outside the adjacent side view with room for both sets of annotations.
 3. Remove every view that carries no dimension, then realise again.
 
 Every change is reported in the `create_drawing` warnings, for example `added Right view to dimension features completely`.

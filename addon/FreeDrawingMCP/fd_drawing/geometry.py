@@ -166,6 +166,24 @@ def iter_vertices(view, limit=5000):
         yield i, (float(v.Point.x), float(v.Point.y))
 
 
+def ensure_cosmetic_vertex(view, point, tol=1e-5):
+    """Resolve or add a vertex at an unscaled, Y-up view-local point."""
+    for index, existing in iter_vertices(view):
+        if dist(existing, point) <= tol:
+            return index
+    # The 3D variant mirrors the projected vertical coordinate in FreeCAD 1.1.
+    # Use the same local frame as getVertexByIndex, and verify the returned point.
+    try:
+        view.makeCosmeticVertex(App.Vector(point[0], point[1], 0))
+        view.Document.recompute()
+    except RuntimeError:
+        return None
+    for index, existing in iter_vertices(view):
+        if dist(existing, point) <= tol:
+            return index
+    return None
+
+
 def _flip_scaled(points, scale):
     s = scale or 1.0
     return [(p[0] / s, -p[1] / s) for p in points]

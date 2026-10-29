@@ -205,12 +205,15 @@ def choose_layout(shape, reqs, turned_axis=None, views="auto"):
 
 
 # Side of the front view each projection sits on, first-angle [02].
-SIDE_FIRST = {"Top": "bottom", "Bottom": "top", "Right": "left", "Left": "right"}
+SIDE_FIRST = {"Top": "bottom", "Bottom": "top", "Right": "left", "Left": "right", "Rear": "right"}
 OPPOSITE = {"top": "bottom", "bottom": "top", "left": "right", "right": "left"}
-EXTRA_VIEWS = ["Top", "Right", "Left", "Bottom"]
+EXTRA_VIEWS = ["Top", "Right", "Left", "Bottom", "Rear"]
 
 
 def side_of_front(name, projection):
+    # FreeCAD's Rear projection is at the far right in both conventions.
+    if name == 'Rear':
+        return 'right'
     side = SIDE_FIRST[name]
     return side if projection != "third" else OPPOSITE[side]
 
@@ -218,11 +221,17 @@ def side_of_front(name, projection):
 def occupied_sides(names, projection):
     occ = {n: set() for n in names}
     for n in names:
-        if n == "Front" or n not in SIDE_FIRST:
+        if n in ("Front", "Rear") or n not in SIDE_FIRST:
             continue
         side = side_of_front(n, projection)
         occ["Front"].add(side)
         occ[n].add(OPPOSITE[side])
+    if "Rear" in names:
+        side = side_of_front("Rear", projection)
+        neighbour = "Left" if projection != "third" else "Right"
+        neighbour = neighbour if neighbour in names else "Front"
+        occ[neighbour].add(side)
+        occ['Rear'].add(OPPOSITE[side])
     return occ
 
 
@@ -237,7 +246,7 @@ def arrange(boxes, names, depths, radial, projection, s):
     pos = {"Front": (0.0, 0.0)}
     F = sb["Front"]
     for n in names:
-        if n == "Front" or n not in SIDE_FIRST:
+        if n in ("Front", "Rear") or n not in SIDE_FIRST:
             continue
         side = side_of_front(n, projection)
         B = sb[n]
@@ -250,6 +259,14 @@ def arrange(boxes, names, depths, radial, projection, s):
             pos[n] = (F[0] - gap - B[2], 0.0)
         else:
             pos[n] = (F[2] + gap - B[0], 0.0)
+    if "Rear" in names:
+        side = side_of_front("Rear", projection)
+        neighbour = "Left" if projection != "third" else "Right"
+        neighbour = neighbour if neighbour in pos else "Front"
+        B, N = sb['Rear'], sb[neighbour]
+        gap = _ext(depths, radial, neighbour, side) + VIEW_GAP + _ext(depths, radial, 'Rear', OPPOSITE[side])
+        x = pos[neighbour][0] + (N[2] + gap - B[0] if side == 'right' else N[0] - gap - B[2])
+        pos['Rear'] = (x, 0.0)
     boxes_out = []
     for n in names:
         b = sb[n]
@@ -614,6 +631,9 @@ def create_drawing(doc, source=None, template="A3", orientation="landscape", pro
     # modelled threads: orthographic views use the ISO 6410 drawing geometry
     draw_obj, thr, thr_warn = drawing_geometry(doc, obj) if auto_dimension or centerlines else (obj, [], [])
     warnings.extend(thr_warn)
+    unspecified_threads = sorted({t['designation'] for t in thr if not t.get('tolerance_class')})
+    if unspecified_threads:
+        warnings.append("thread tolerance class requires design input: " + ", ".join(unspecified_threads))
     shape = draw_obj.Shape
     info = analysis.classify(shape)
     coverage_gaps = []

@@ -329,7 +329,7 @@ def rules_C(c: Ctx):
             if v is front or t not in _FIRST:
                 continue
             ex, ey = _FIRST[t]
-            if proj == "third":
+            if proj == "third" and t != 'Rear':
                 ex, ey = -ex, -ey
             dx, dy = v["center"][0] - fc[0], v["center"][1] - fc[1]
             wrong = (ex and (dx * ex <= 0 or abs(dy) > 0.5)) or (ey and (dy * ey <= 0 or abs(dx) > 0.5))
@@ -796,7 +796,8 @@ def rules_J(c: Ctx):
     yield F("J.2", "warn" if incomplete else "pass",
             "thread family, size, pitch and class complete" if not incomplete else f"incomplete metric callout(s): {', '.join(incomplete[:4])}",
             hint="state pitch and class, e.g. M8×1.25-6H")
-    internal = [t for t in threads if re.search(r"-\d[GH]\b", t)]
+    internal_designations = {t.get('designation') for t in meta_threads if t.get('internal')}
+    internal = [t for t in threads if re.search(r"-\d[GH]\b", t) or t in internal_designations]
     nodepth = [t for t in internal if not re.search(re.escape(t) + r"[^\n]*(THRU|DEEP|↧)", c.all_text)]
     yield F("J.3", "warn" if nodepth else ("pass" if internal else "na"),
             "internal threads state depth or THRU" if not nodepth else f"internal thread without depth/THRU: {', '.join(nodepth[:4])}",
